@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}مدیریت چک‌ها{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+        <h4 class="fw-bold mb-0"><i class="bi bi-card-checklist me-2"></i>مدیریت چک‌ها و صیادی</h4>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newChequeModal">
+            <i class="bi bi-plus-lg me-1"></i> ثبت چک جدید
+        </button>
+    </div>
+</div>
+
+<div class="table-responsive bg-white rounded shadow-sm">
+    <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+            <tr>
+                <th>نوع</th>
+                <th>طرف‌حساب</th>
+                <th>مبلغ (ریال)</th>
+                <th>سررسید</th>
+                <th>بانک / صیاد</th>
+                <th>وضعیت</th>
+                <th class="text-center">عملیات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ch in cheques %}
+            <tr>
+                <td>
+                    {% if ch.type == 'RECEIVABLE' %}
+                    <span class="badge bg-success-subtle text-success border border-success">دریافتی از مشتری</span>
+                    {% else %}
+                    <span class="badge bg-danger-subtle text-danger border border-danger">پرداختی ما</span>
+                    {% endif %}
+                </td>
+                <td class="fw-bold">{{ ch.person.full_name }}</td>
+                <td class="latin-num fw-bold">{{ ch.amount | rial }}</td>
+                <td class="latin-num text-muted small">{{ ch.due_date | jalali }}</td>
+                <td class="small">
+                    <div>{{ ch.bank_name or '-' }}</div>
+                    {% if ch.sayad_id %}<span class="text-muted latin-num">صیاد: {{ ch.sayad_id }}</span>{% endif %}
+                </td>
+                <td>
+                    {% if ch.status == 'PENDING' %}
+                    <span class="badge bg-warning text-dark">در انتظار وصول</span>
+                    {% elif ch.status == 'CLEARED' %}
+                    <span class="badge bg-success">پاس شده</span>
+                    {% elif ch.status == 'BOUNCED' %}
+                    <span class="badge bg-danger">برگشت خورده</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    {% if ch.status == 'PENDING' %}
+                    <button class="btn btn-sm btn-outline-success me-1" data-bs-toggle="modal" data-bs-target="#clearModal{{ ch.id }}" title="وصول چک">
+                        <i class="bi bi-check-lg"></i> وصول
+                    </button>
+                    <form method="post" action="/cheques/{{ ch.id }}/bounce" class="d-inline" onsubmit="return confirm('آیا وضعیت چک به برگشتی تغییر کند؟');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="برگشت چک"><i class="bi bi-x-circle"></i></button>
+                    </form>
+
+                    <!-- Modal Clear Cheque -->
+                    <div class="modal fade" id="clearModal{{ ch.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content text-start">
+                                <form method="post" action="/cheques/{{ ch.id }}/clear">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title fw-bold">وصول و پاس کردن چک</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p class="text-muted small">مبلغ <strong class="latin-num">{{ ch.amount | rial }}</strong> ریال به کدام حساب منظور شود؟</p>
+                                        <div class="mb-3">
+                                            <label class="form-label">انتخاب حساب بانکی / صندوق</label>
+                                            <select name="account_id" class="form-select" required>
+                                                {% for acc in accounts %}
+                                                <option value="{{ acc.id }}" {% if ch.account_id == acc.id %}selected{% endif %}>{{ acc.title }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                                        <button type="submit" class="btn btn-success">تایید و ثبت وصول</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <span class="text-muted small">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="text-center py-4 text-muted">هیچ چکی ثبت نشده است.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal New Cheque -->
+<div class="modal fade" id="newChequeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="/cheques/create">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">ثبت برگه چک</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">نوع چک <span class="text-danger">*</span></label>
+                        <select name="cheque_type" class="form-select" required>
+                            <option value="RECEIVABLE">چک دریافتی (از دیگران)</option>
+                            <option value="PAYABLE">چک پرداختی (دسته چک ما)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">طرف‌حساب <span class="text-danger">*</span></label>
+                        <select name="person_id" class="form-select" required>
+                            {% for p in persons %}
+                            <option value="{{ p.id }}">{{ p.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">مبلغ چک (ریال) <span class="text-danger">*</span></label>
+                        <input type="number" name="amount" class="form-control text-start" required min="1">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">تاریخ سررسید (شمسی) <span class="text-danger">*</span></label>
+                            <input type="text" name="due_date" class="form-control text-start" placeholder="1403/07/01" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">تاریخ صدور</label>
+                            <input type="text" name="issue_date" class="form-control text-start" placeholder="1403/05/01">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">نام بانک</label>
+                            <input type="text" name="bank_name" class="form-control" placeholder="مثال: ملت">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">شماره صیادی (16 رقمی)</label>
+                            <input type="text" name="sayad_id" class="form-control text-start">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">توضیحات</label>
+                        <textarea name="description" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-primary">ثبت چک</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

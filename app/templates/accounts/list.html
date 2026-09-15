@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}حساب‌ها و صندوق‌ها{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="bi bi-bank me-2"></i>حساب‌ها و صندوق‌ها</h4>
+        <p class="text-muted mb-0">موجودی کل: <span class="badge bg-success fs-6 latin-num">{{ total_balance | rial }} ریال</span></p>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newAccountModal">
+        <i class="bi bi-plus-lg me-1"></i> افزودن حساب جدید
+    </button>
+</div>
+
+<div class="row g-3">
+    {% for acc in accounts %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card card-stat h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <h5 class="card-title fw-bold text-primary mb-2">{{ acc.title }}</h5>
+                    <form method="post" action="/accounts/{{ acc.id }}/delete" onsubmit="return confirm('آیا از حذف این حساب اطمینان دارید؟');">
+                        <button type="submit" class="btn btn-outline-danger btn-sm border-0"><i class="bi bi-trash"></i></button>
+                    </form>
+                </div>
+                <h6 class="text-muted small mb-3">{{ acc.bank_name or 'صندوق نقدی' }}</h6>
+                <div class="p-2 bg-light rounded mb-3">
+                    <span class="text-muted small d-block">موجودی:</span>
+                    <strong class="fs-5 text-dark latin-num">{{ acc.balance | rial }} ریال</strong>
+                </div>
+                {% if acc.card_number %}
+                <div class="small text-muted mb-1">شماره کارت: <span class="latin-num">{{ acc.card_number }}</span></div>
+                {% endif %}
+                {% if acc.sheba %}
+                <div class="small text-muted">شبا: <span class="latin-num">{{ acc.sheba }}</span></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12 text-center py-5 text-muted">
+        <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+        هنوز هیچ حسابی ثبت نشده است.
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal New Account -->
+<div class="modal fade" id="newAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="/accounts/create">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">افزودن حساب / صندوق جدید</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">عنوان حساب / صندوق <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" placeholder="مثال: حساب پاسارگاد اصلی" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">نام بانک</label>
+                        <input type="text" name="bank_name" class="form-control" placeholder="مثال: پاسارگاد">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">موجودی اولیه (ریال)</label>
+                        <input type="number" name="balance" class="form-control text-start" value="0" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">شماره کارت</label>
+                        <input type="text" name="card_number" class="form-control text-start" placeholder="16 رقمی">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">شماره شبا</label>
+                        <input type="text" name="sheba" class="form-control text-start" placeholder="IR...">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-primary">ثبت حساب</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

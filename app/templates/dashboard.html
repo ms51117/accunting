@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}داشبورد مدیریت مالی{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+    <!-- کل موجودی -->
+    <div class="col-md-4">
+        <div class="card card-stat bg-primary text-white p-3">
+            <span class="fs-6 opacity-75">موجودی کل نقدینگی</span>
+            <h3 class="fw-bold mt-2 mb-0 latin-num">{{ total_balance | rial }} <small class="fs-6">ریال</small></h3>
+        </div>
+    </div>
+    <!-- چک‌های در جریان -->
+    <div class="col-md-4">
+        <div class="card card-stat bg-white p-3 border-start border-success border-4">
+            <span class="text-muted small">چک‌های دریافتی نزد صندوق (پاس‌نشده)</span>
+            <h4 class="text-success fw-bold mt-1 mb-0 latin-num">{{ pending_receivable_cheques | rial }} <small class="fs-6">ریال</small></h4>
+            <hr class="my-2">
+            <span class="text-muted small">چک‌های پرداختی ما (پاس‌نشده)</span>
+            <h4 class="text-danger fw-bold mt-1 mb-0 latin-num">{{ pending_payable_cheques | rial }} <small class="fs-6">ریال</small></h4>
+        </div>
+    </div>
+    <!-- مطالبات و بدهی‌ها -->
+    <div class="col-md-4">
+        <div class="card card-stat bg-white p-3 border-start border-warning border-4">
+            <span class="text-muted small">کل طلب ما از اشخاص</span>
+            <h4 class="text-info fw-bold mt-1 mb-0 latin-num">{{ total_receivable_debt | rial }} <small class="fs-6">ریال</small></h4>
+            <hr class="my-2">
+            <span class="text-muted small">کل بدهی ما به اشخاص</span>
+            <h4 class="text-secondary fw-bold mt-1 mb-0 latin-num">{{ total_payable_debt | rial }} <small class="fs-6">ریال</small></h4>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- چک‌های نزدیک به سررسید -->
+    <div class="col-lg-6">
+        <div class="card card-stat bg-white">
+            <div class="card-header bg-white py-3">
+                <h5 class="card-title fw-bold mb-0"><i class="bi bi-calendar-event text-warning me-2"></i>سررسید چک‌های پیش‌رو</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light small">
+                        <tr>
+                            <th>نوع</th>
+                            <th>طرف‌حساب</th>
+                            <th>مبلغ (ریال)</th>
+                            <th>سررسید</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ch in upcoming_cheques %}
+                        <tr>
+                            <td>
+                                {% if ch.type == 'RECEIVABLE' %}
+                                <span class="badge bg-success-subtle text-success border border-success">دریافتی</span>
+                                {% else %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger">پرداختی</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ ch.person.full_name }}</td>
+                            <td class="fw-bold latin-num">{{ ch.amount | rial }}</td>
+                            <td class="latin-num text-muted small">{{ ch.due_date | jalali }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-3 text-muted">چک در انتظاری وجود ندارد.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- آخرین تراکنش‌ها -->
+    <div class="col-lg-6">
+        <div class="card card-stat bg-white">
+            <div class="card-header bg-white py-3">
+                <h5 class="card-title fw-bold mb-0"><i class="bi bi-clock-history text-primary me-2"></i>تراکنش‌های اخیر</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light small">
+                        <tr>
+                            <th>نوع</th>
+                            <th>دسته‌بندی</th>
+                            <th>حساب</th>
+                            <th>مبلغ (ریال)</th>
+                            <th>تاریخ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tr in recent_transactions %}
+                        <tr>
+                            <td>
+                                {% if tr.type == 'INCOME' %}
+                                <span class="text-success"><i class="bi bi-arrow-down-left"></i> درآمد</span>
+                                {% elif tr.type == 'EXPENSE' %}
+                                <span class="text-danger"><i class="bi bi-arrow-up-right"></i> هزینه</span>
+                                {% else %}
+                                <span class="text-secondary"><i class="bi bi-arrow-left-right"></i> انتقال</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ tr.category }}</td>
+                            <td class="small">{{ tr.account.title }}</td>
+                            <td class="fw-bold latin-num">{{ tr.amount | rial }}</td>
+                            <td class="latin-num text-muted small">{{ tr.trans_date | jalali }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-3 text-muted">هیچ تراکنشی ثبت نشده است.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

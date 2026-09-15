@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}طلب و بدهی اشخاص{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0"><i class="bi bi-wallet2 me-2"></i>دفتر طلب و بدهی اشخاص</h4>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newDebtModal">
+        <i class="bi bi-plus-lg me-1"></i> ثبت طلب / بدهی
+    </button>
+</div>
+
+<div class="table-responsive bg-white rounded shadow-sm">
+    <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+            <tr>
+                <th>نوع</th>
+                <th>طرف‌حساب</th>
+                <th>مبلغ کل (ریال)</th>
+                <th>تسویه شده</th>
+                <th>مانده (ریال)</th>
+                <th>سررسید</th>
+                <th>وضعیت</th>
+                <th class="text-center">عملیات تسویه</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in debts %}
+            <tr>
+                <td>
+                    {% if d.type == 'RECEIVABLE' %}
+                    <span class="badge bg-info-subtle text-info border border-info">طلب ما</span>
+                    {% else %}
+                    <span class="badge bg-secondary-subtle text-secondary border border-secondary">بدهی ما</span>
+                    {% endif %}
+                </td>
+                <td class="fw-bold">{{ d.person.full_name }}</td>
+                <td class="latin-num fw-bold">{{ d.amount | rial }}</td>
+                <td class="latin-num text-success">{{ d.paid_amount | rial }}</td>
+                <td class="latin-num fw-bold text-danger">{{ (d.amount - d.paid_amount) | rial }}</td>
+                <td class="latin-num text-muted small">{{ d.due_date | jalali if d.due_date else '-' }}</td>
+                <td>
+                    {% if d.status == 'ACTIVE' %}
+                    <span class="badge bg-warning text-dark">جاری</span>
+                    {% else %}
+                    <span class="badge bg-success">تسویه کامل</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    {% if d.status == 'ACTIVE' %}
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#payModal{{ d.id }}">
+                        <i class="bi bi-cash-stack me-1"></i> دریافت / پرداخت
+                    </button>
+
+                    <!-- Modal Settle -->
+                    <div class="modal fade" id="payModal{{ d.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content text-start">
+                                <form method="post" action="/debts/{{ d.id }}/pay">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title fw-bold">ثبت تسویه مالی</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p class="small text-muted">مانده کل: <strong class="latin-num">{{ (d.amount - d.paid_amount) | rial }}</strong> ریال</p>
+                                        <div class="mb-3">
+                                            <label class="form-label">مبلغ پرداختی / دریافتی (ریال)</label>
+                                            <input type="number" name="pay_amount" class="form-control text-start" value="{{ d.amount - d.paid_amount }}" max="{{ d.amount - d.paid_amount }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">حساب مبدأ / مقصد</label>
+                                            <select name="account_id" class="form-select" required>
+                                                {% for acc in accounts %}
+                                                <option value="{{ acc.id }}">{{ acc.title }} (موجودی: {{ acc.balance | rial }})</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                                        <button type="submit" class="btn btn-primary">ثبت تراکنش تسویه</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <span class="text-success small"><i class="bi bi-check-all"></i> بسته‌شده</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                _amount) | rial }}</strong> ریال</p>
+                                        <div class="mb-3">
+                                            <label class="form-label">مبلغ پرداختی / دریافتی (ریال)</label>
+                                            <input type="number" name="pay_amount" class="form-control text-start" value="{{ d.amount - d.paid_amount }}" max="{{ d.amount - d.paid_amount }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">حساب مبدأ / مقصد</label>
+                                            <select name="account_id" class="form-select" required>
+                                                {% for acc in accounts %}
+                                                <option value="{{ acc.id }}">{{ acc.title }} (موجودی: {{ acc.balance | rial }})</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                                        <button type="submit" class="btn btn-primary">ثبت تراکنش تسویه</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <span class="text-success small"><i class="bi bi-check-all"></i> بسته‌شده</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8" class="text-center py-4 text-muted">هیچ موردی ثبت نشده است.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal New Debt -->
+<div class="modal fade" id="newDebtModal" tabindex="-1">
+    <div class="modal-dialog">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">تاریخ موعد سررسید (شمسی)</label>
+                        <input type="text" name="due_date" class="form-control text-start" placeholder="1403/08/30">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">توضیحات / بابت</label>
+                        <textarea name="description" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-primary">ثبت در دفتر</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
