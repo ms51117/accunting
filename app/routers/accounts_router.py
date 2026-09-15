@@ -12,11 +12,11 @@ templates = Jinja2Templates(directory="app/templates")
 def list_accounts(request: Request, db: Session = Depends(get_db)):
     accounts = db.query(Account).order_by(Account.id.desc()).all()
     total_balance = sum(acc.balance for acc in accounts)
-    return templates.TemplateResponse("accounts/list.html", {
-        "request": request,
-        "accounts": accounts,
-        "total_balance": total_balance
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="accounts/list.html",
+        context={"total_balance": total_balance, "accounts": accounts},
+    )
 
 @router.post("/create")
 def create_account(

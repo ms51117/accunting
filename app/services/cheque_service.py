@@ -1,52 +1,66 @@
-from sqlalchemy.orm import Session
 from datetime import date
-from app.models.cheque import Cheque
+from sqlalchemy.orm import Session
+from app.models.cheque import Cheque, ChequeStatus, ChequeType
 from app.models.account import Account
-from app.models.transaction import Transaction
+from app.models.transaction import Transaction, TransactionType
 
-def process_cheque_status_change(db: Session, cheque: Cheque, new_status: str, account_id: int | None = None):
-    old_status = cheque.status
-    if old_status == new_status:
-        return
 
-    target_account_id = account_id or cheque.account_id
-    if not target_account_id and new_status == "CLEARED":
-        raise ValueError("برای وصول چک باید یک حساب بانکی مشخص شود.")
+def clear_cheque(db: Session, cheque_id: int, target_account_id: int = None) -> Cheque:
+    cheque = db.query(Cheque).filter(Cheque.id == cheque_id).first()
+    if not cheque:
+        raise ValueError("چک مورد نظر یافت نشد.")
 
-    account = db.query(Account).filter(Account.id == target_account_id).first() if target_account_id else None
+    if cheque.status == ChequeStatus.CLEARED.value if hasattr(ChequeStatus, 'value') else cheque.status == "CLEARED":
+        raise ValueError("این چک قبلاً وصول شده است.")
 
-    # اگر قبلا پاس شده بوده و الان تغییر وضعیت میده، اثر قبلی خنثی بشه
-    if old_status == "CLEARED" and cheque.account:
-        if cheque.type == "RECEIVABLE":
-            cheque.account.balance -= cheque.amount
-        elif cheque.type == "PAYABLE":
-            cheque.account.balance += cheque.amount
+    account_id = target_account_id or cheque.account_id
+    if not account_id:
+        raise ValueError("حساب بانکی جهت وصول چک مشخص نشده است.")
 
-    # اعمال وضعیت جدید
-    if new_status == "CLEARED" and account:
-        cheque.account_id = account.id
-        cheque.cleared_date = date.today()
-        if cheque.type == "RECEIVABLE": # چک دریافتی پاس شد -> پول میاد به حساب
-            account.balance += cheque.amount
-            # ثبت تراکنش متناظر
-            db.add(Transaction(
-                account_id=account.id,
-                type="INCOME",
-                category="وصول چک",
-                amount=cheque.amount,
-                trans_date=date.today(),
-                description=f"وصول چک دریافتی شماره {cheque.cheque_number} - {cheque.person.full_name}"
-            ))
-        elif cheque.type == "PAYABLE": # چک پرداختی ما پاس شد -> پول از حساب کسر میشه
-            account.balance -= cheque.amount
-            db.add(Transaction(
-                account_id=account.id,
-                type="EXPENSE",
-                category="پاس شدن چک",
-                amount=cheque.amount,
-                trans_date=date.today(),
-                description=f"پاس شدن چک پرداختی شماره {cheque.cheque_number} - {cheque.person.full_name}"
-            ))
+    account = db.query(Account).filter(Account.id == account_id).first()
+    if not account:
+        raise ValueError("حساب بانکی مورد نظر یافت نشد.")
 
-    cheque.status = new_status
+    # اعمال اثر مالی بر موجودی و ثبت تراکنش
+    is_receivable = cheque.type in [ChequeType.RECEIVABLE, "RECEIVABLE"] if hasattr(ChequeType, 'RECEIVABLE') else cheque.type == "RECEIVABLE"
+
+    if is_receivable:
+        account.balance += cheque.amount
+        tx_type = TransactionType.INCOME if hasattr(TransactionType, 'INCOME') else "INCOME"
+        tx_desc = f"وصول چک دریافتی شماره {cheque.serial_number or cheque.cheque_number or ''} - طرف حساب: {cheque.person.full_name if cheque.person else '---'}"
+    else:
+        account.balance -= cheque.amount
+        tx_type = TransactionType.EXPENSE if hasattr(TransactionType, 'EXPENSE') else "EXPENSE"
+        tx_desc = f"پاس شدن چک پرداختی شماره {cheque.serial_number or cheque.cheque_number or ''} - طرف حساب: {cheque.person.full_name if cheque.person else '---'}"
+
+    cheque.status = ChequeStatus.CLEARED if hasattr(ChequeStatus, 'CLEARED') else "CLEARED"
+    cheque.account_id = account_id
+
+    transaction = Transaction(
+        account_id=account.id,
+        person_id=cheque.person_id,
+        amount=cheque.amount,
+        type=tx_type,
+        category="چک",
+        trans_date=date.today(),
+        description=tx_desc
+    )
+    db.add(transaction)
     db.commit()
+    db.refresh(cheque)
+    return cheque
+
+
+def bounce_cheque(db: Session, cheque_id: int) -> Cheque:
+    cheque = db.query(Cheque).filter(Cheque.id == cheque_id).first()
+    if not cheque:
+        raise ValueError("چک مورد نظر یافت نشد.")
+
+    cleared_val = ChequeStatus.CLEARED if hasattr(ChequeStatus, 'CLEARED') else "CLEARED"
+    if cheque.status == cleared_val:
+        raise ValueError("چک وصول‌شده را نمی‌توان مستقیماً برگشت زد.")
+
+    cheque.status = ChequeStatus.BOUNCED if hasattr(ChequeStatus, 'BOUNCED') else "BOUNCED"
+    db.commit()
+    db.refresh(cheque)
+    return cheque

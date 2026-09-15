@@ -7,7 +7,7 @@ from app.auth import get_current_user
 from app.models.account import Account
 from app.models.person import Person
 from app.models.transaction import Transaction
-from app.utils.jalali import jalali_to_gregorian
+from app.utils.jalali import parse_jalali_str
 
 router = APIRouter(prefix="/transactions", tags=["Transactions"], dependencies=[Depends(get_current_user)])
 templates = Jinja2Templates(directory="app/templates")
@@ -17,8 +17,10 @@ def list_transactions(request: Request, db: Session = Depends(get_db)):
     transactions = db.query(Transaction).order_by(Transaction.trans_date.desc(), Transaction.id.desc()).all()
     accounts = db.query(Account).all()
     persons = db.query(Person).all()
-    return templates.TemplateResponse("transactions/list.html", {
-        "request": request,
+    return templates.TemplateResponse(
+        request=request,
+        name="transactions/list.html",
+        context={
         "transactions": transactions,
         "accounts": accounts,
         "persons": persons
@@ -39,7 +41,7 @@ def create_transaction(
     # تبدیل تاریخ شمسی به میلادی
     try:
         if "/" in trans_date and len(trans_date.split("/")[0]) == 4:
-            g_date = jalali_to_gregorian(trans_date.strip())
+            g_date = parse_jalali_str(trans_date.strip())
         else:
             g_date = datetime.strptime(trans_date.strip(), "%Y-%m-%d").date()
     except Exception:

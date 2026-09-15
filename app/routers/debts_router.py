@@ -8,7 +8,7 @@ from app.models.account import Account
 from app.models.person import Person
 from app.models.debt import Debt
 from app.models.transaction import Transaction
-from app.utils.jalali import jalali_to_gregorian
+from app.utils.jalali import parse_jalali_str
 
 router = APIRouter(prefix="/debts", tags=["Debts"], dependencies=[Depends(get_current_user)])
 templates = Jinja2Templates(directory="app/templates")
@@ -19,9 +19,11 @@ def list_debts(request: Request, db: Session = Depends(get_db)):
     debts = db.query(Debt).order_by(Debt.id.desc()).all()
     persons = db.query(Person).all()
     accounts = db.query(Account).all()
-    return templates.TemplateResponse("debts/list.html", {
-        "request": request,
-        "debts": debts,
+    return templates.TemplateResponse(
+        request=request,
+        name="debts/list.html",
+        context={
+            "debts": debts,
         "persons": persons,
         "accounts": accounts
     })
@@ -39,7 +41,7 @@ def create_debt(
     g_due_date = None
     if due_date:
         try:
-            g_due_date = jalali_to_gregorian(due_date.strip()) if "/" in due_date else datetime.strptime(
+            g_due_date = parse_jalali_str(due_date.strip()) if "/" in due_date else datetime.strptime(
                 due_date.strip(), "%Y-%m-%d").date()
         except Exception:
             g_due_date = None

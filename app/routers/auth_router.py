@@ -31,8 +31,9 @@ def login_action(
         return response
 
     return templates.TemplateResponse(
-        "login.html",
-        {"request": request, "error": "نام کاربری یا کلمه عبور نادرست است."}
+        request=request,
+        name="login.html",
+        context={"error": None}
     )
 
 

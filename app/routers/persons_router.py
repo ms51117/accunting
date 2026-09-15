@@ -14,10 +14,12 @@ def list_persons(request: Request, search: str = None, db: Session = Depends(get
     if search:
         query = query.filter(Person.full_name.contains(search.strip()) | Person.phone.contains(search.strip()))
     persons = query.order_by(Person.id.desc()).all()
-    return templates.TemplateResponse("persons/list.html", {
-        "request": request,
-        "persons": persons,
+    return templates.TemplateResponse(
+        request=request,
+        name="persons/list.html",
+        context={"persons": persons,
         "search": search or ""
+
     })
 
 @router.post("/create")

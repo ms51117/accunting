@@ -38,13 +38,15 @@ def dashboard_view(request: Request, db: Session = Depends(get_db)):
     upcoming_cheques = db.query(Cheque).filter(Cheque.status == "PENDING").order_by(Cheque.due_date.asc()).limit(
         5).all()
 
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "total_balance": total_balance,
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard.html",
+        context={"total_balance": total_balance,
         "pending_receivable_cheques": pending_receivable_cheques,
         "pending_payable_cheques": pending_payable_cheques,
         "total_receivable_debt": total_receivable_debt,
         "total_payable_debt": total_payable_debt,
         "recent_transactions": recent_transactions,
         "upcoming_cheques": upcoming_cheques
+
     })

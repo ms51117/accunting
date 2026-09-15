@@ -8,7 +8,7 @@ from app.models.account import Account
 from app.models.person import Person
 from app.models.cheque import Cheque
 from app.services.cheque_service import clear_cheque, bounce_cheque
-from app.utils.jalali import jalali_to_gregorian
+from app.utils.jalali import parse_jalali_str
 
 router = APIRouter(prefix="/cheques", tags=["Cheques"], dependencies=[Depends(get_current_user)])
 templates = Jinja2Templates(directory="app/templates")
@@ -26,9 +26,10 @@ def list_cheques(request: Request, type_filter: str = None, status_filter: str =
     accounts = db.query(Account).all()
     persons = db.query(Person).all()
 
-    return templates.TemplateResponse("cheques/list.html", {
-        "request": request,
-        "cheques": cheques,
+    return templates.TemplateResponse(
+        request=request,
+        name="cheques/list.html",
+        context={"cheques": cheques,
         "accounts": accounts,
         "persons": persons,
         "type_filter": type_filter or "",
@@ -38,31 +39,29 @@ def list_cheques(request: Request, type_filter: str = None, status_filter: str =
 
 @router.post("/create")
 def create_cheque(
-        cheque_type: str = Form(...),  # RECEIVABLE (دریافتی), PAYABLE (پرداختی)
-        person_id: int = Form(...),
-        account_id: int = Form(None),
-        amount: int = Form(...),
-        due_date: str = Form(...),
-        issue_date: str = Form(None),
-        serial_number: str = Form(None),
-        sayad_id: str = Form(None),
-        bank_name: str = Form(None),
-        description: str = Form(None),
-        db: Session = Depends(get_db)
+    cheque_type: str = Form(...),
+    person_id: int = Form(...),
+    amount: int = Form(...),
+    due_date: str = Form(...),
+    account_id: int = Form(None),
+    issue_date: str = Form(None),
+    serial_number: str = Form(None),
+    sayad_id: str = Form(None),
+    bank_name: str = Form(None),
+    description: str = Form(None),
+    db: Session = Depends(get_db)
 ):
     try:
-        g_due_date = jalali_to_gregorian(due_date.strip()) if "/" in due_date else datetime.strptime(due_date.strip(),
-                                                                                                     "%Y-%m-%d").date()
+        g_due_date = parse_jalali_str(due_date.strip())
     except Exception:
         g_due_date = date.today()
 
     g_issue_date = None
-    if issue_date:
+    if issue_date and issue_date.strip():
         try:
-            g_issue_date = jalali_to_gregorian(issue_date.strip()) if "/" in issue_date else datetime.strptime(
-                issue_date.strip(), "%Y-%m-%d").date()
+            g_issue_date = parse_jalali_str(issue_date.strip())
         except Exception:
-            g_issue_date = date.today()
+            g_issue_date = None
 
     new_cheque = Cheque(
         type=cheque_type,
@@ -79,17 +78,16 @@ def create_cheque(
     )
     db.add(new_cheque)
     db.commit()
-    return responses.RedirectResponse(url="/cheques", status_code=status.HTTP_302_FOUND)
+    return responses.RedirectResponse(url="/cheques", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/{cheque_id}/clear")
 def process_clear_cheque(cheque_id: int, account_id: int = Form(...), db: Session = Depends(get_db)):
-    # استفاده از سرویس استاندارد برای اثرگذاری روی موجودی
     clear_cheque(db=db, cheque_id=cheque_id, target_account_id=account_id)
-    return responses.RedirectResponse(url="/cheques", status_code=status.HTTP_302_FOUND)
+    return responses.RedirectResponse(url="/cheques", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/{cheque_id}/bounce")
 def process_bounce_cheque(cheque_id: int, db: Session = Depends(get_db)):
     bounce_cheque(db=db, cheque_id=cheque_id)
-    return responses.RedirectResponse(url="/cheques", status_code=status.HTTP_302_FOUND)
+    return responses.RedirectResponse(url="/cheques", status_code=status.HTTP_303_SEE_OTHER)
