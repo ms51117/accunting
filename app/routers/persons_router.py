@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Request, Depends, Form, responses, status
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
 from app.database import get_db
 from app.auth import get_current_user
 from app.models.person import Person
+from fastapi import APIRouter, Depends, Form, HTTPException, status
+from fastapi.responses import RedirectResponse
+from sqlalchemy.orm import Session
+
 
 router = APIRouter(prefix="/persons", tags=["Persons"], dependencies=[Depends(get_current_user)])
 templates = Jinja2Templates(directory="app/templates")
@@ -59,6 +62,31 @@ def create_person(
     db.add(person)
     db.commit()
     return responses.RedirectResponse(url="/persons", status_code=status.HTTP_302_FOUND)
+
+@router.post("/{person_id}/edit")
+def edit_person(
+    person_id: int,
+    full_name: str = Form(...),
+    phone: str = Form(None),
+    bank_name: str = Form(None),
+    card_number: str = Form(None),
+    sheba: str = Form(None),
+    notes: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    person = db.query(Person).filter(Person.id == person_id).first()
+    if not person:
+        raise HTTPException(status_code=404, detail="شخص مورد نظر یافت نشد")
+
+    person.full_name = full_name.strip()
+    person.phone = phone.strip() if phone else None
+    person.bank_name = bank_name.strip() if bank_name else None
+    person.card_number = card_number.strip() if card_number else None
+    person.sheba = sheba.strip() if sheba else None
+    person.notes = notes.strip() if notes else None
+
+    db.commit()
+    return RedirectResponse(url="/persons", status_code=status.HTTP_303_SEE_OTHER)
 
 @router.post("/{person_id}/delete")
 def delete_person(person_id: int, db: Session = Depends(get_db)):

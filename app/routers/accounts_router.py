@@ -1,6 +1,9 @@
 from fastapi import APIRouter, Request, Depends, Form, responses, status
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from starlette.exceptions import HTTPException
+from starlette.responses import RedirectResponse
+
 from app.database import get_db
 from app.auth import get_current_user
 from app.models.account import Account
@@ -55,6 +58,30 @@ def create_account(
     db.add(acc)
     db.commit()
     return responses.RedirectResponse(url="/accounts", status_code=status.HTTP_302_FOUND)
+
+@router.post("/{account_id}/edit")
+def edit_account(
+    account_id: int,
+    title: str = Form(...),
+    bank_name: str = Form(None),
+    card_number: str = Form(None),
+    sheba: str = Form(None),
+    db: Session = Depends(get_db),
+):
+    account = db.query(Account).filter(Account.id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="حساب یافت نشد")
+
+    account.title = title
+    account.bank_name = bank_name
+    account.card_number = card_number
+    account.sheba = sheba
+
+    db.commit()
+    return RedirectResponse(
+        url="/accounts", status_code=status.HTTP_303_SEE_OTHER
+    )
+
 
 @router.post("/{account_id}/delete")
 def delete_account(account_id: int, db: Session = Depends(get_db)):

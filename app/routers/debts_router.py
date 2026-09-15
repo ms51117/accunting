@@ -11,6 +11,10 @@ from app.models.person import Person
 from app.models.debt import Debt
 from app.models.transaction import Transaction
 from app.utils.jalali import parse_jalali_str
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi.responses import RedirectResponse
+
+
 
 router = APIRouter(prefix="/debts", tags=["Debts"], dependencies=[Depends(get_current_user)])
 templates = Jinja2Templates(directory="app/templates")
@@ -79,6 +83,56 @@ def create_debt(
     db.add(debt)
     db.commit()
     return responses.RedirectResponse(url="/debts", status_code=status.HTTP_302_FOUND)
+
+
+@router.post("/{debt_id}/update")
+def update_debt(
+    debt_id: int,
+    type: str = Form(...),
+    person_id: int = Form(...),
+    amount: int = Form(...),
+    due_date: str = Form(None),
+    description: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    debt = db.query(Debt).filter(Debt.id == debt_id).first()
+    if not debt:
+        raise HTTPException(status_code=404, detail="رکورد یافت نشد")
+
+    parsed_due_date = None
+    if due_date and due_date.strip():
+        try:
+            parsed_due_date = parse_jalali_str(due_date.strip())
+        except Exception:
+            parsed_due_date = None
+
+    debt.type = type
+    debt.person_id = person_id
+    debt.amount = amount
+    debt.due_date = parsed_due_date
+    debt.description = description.strip() if description else None
+
+    # بررسی وضعیت جدید بر اساس مبالغ
+    if debt.paid_amount >= debt.amount:
+        debt.status = "SETTLED"
+    else:
+        debt.status = "ACTIVE"
+
+    db.commit()
+    return RedirectResponse(url="/debts", status_code=status.HTTP_303_SEE_OTHER)
+
+
+
+@router.post("/{debt_id}/delete")
+def delete_debt(debt_id: int, db: Session = Depends(get_db)):
+    debt = db.query(Debt).filter(Debt.id == debt_id).first()
+    if not debt:
+        raise HTTPException(status_code=404, detail="رکورد یافت نشد")
+
+    db.delete(debt)
+    db.commit()
+    return RedirectResponse(url="/debts", status_code=status.HTTP_303_SEE_OTHER)
+
 
 
 @router.post("/{debt_id}/pay")
