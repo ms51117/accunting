@@ -16,11 +16,13 @@ class Transaction(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
+    person_id = Column(Integer, ForeignKey("persons.id"), nullable=True)
     type = Column(String(20), nullable=False)  # INCOME, EXPENSE, TRANSFER
     category = Column(String(50), nullable=False)  # دسته‌بندی: حقوق، فروش ملک، اجاره و...
     amount = Column(BigInteger, nullable=False)  # ریال
     trans_date = Column(Date, nullable=False)
     description = Column(Text, nullable=True)
     created_at = Column(DateTime, default=func.now())
+
 
     account = relationship("Account", back_populates="transactions")

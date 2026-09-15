@@ -1,4 +1,6 @@
 from datetime import datetime, date
+from typing import Optional
+
 from fastapi import APIRouter, Request, Depends, Form, responses, status
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -47,13 +49,15 @@ def list_debts(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/create")
 def create_debt(
-        debt_type: str = Form(...),  # RECEIVABLE (طلب ما از شخص), PAYABLE (بدهی ما به شخص)
+
+        type: str = Form(...),  # RECEIVABLE (طلب ما از شخص), PAYABLE (بدهی ما به شخص)
         person_id: int = Form(...),
         amount: int = Form(...),
         due_date: str = Form(None),
         description: str = Form(None),
         db: Session = Depends(get_db)
 ):
+
     g_due_date = None
     if due_date:
         try:
@@ -62,8 +66,9 @@ def create_debt(
         except Exception:
             g_due_date = None
 
+
     debt = Debt(
-        type=debt_type,
+        type=type,
         person_id=person_id,
         amount=amount,
         paid_amount=0,

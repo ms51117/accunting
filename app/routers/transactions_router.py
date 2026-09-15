@@ -79,7 +79,6 @@ def create_transaction(
 
     new_trans = Transaction(
         account_id=source_acc.id,
-        destination_account_id=destination_account_id if trans_type == "TRANSFER" else None,
         person_id=person_id if person_id else None,
         type=trans_type,
         category=category.strip(),

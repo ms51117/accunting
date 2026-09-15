@@ -27,11 +27,11 @@ def clear_cheque(db: Session, cheque_id: int, target_account_id: int = None) -> 
     if is_receivable:
         account.balance += cheque.amount
         tx_type = TransactionType.INCOME if hasattr(TransactionType, 'INCOME') else "INCOME"
-        tx_desc = f"وصول چک دریافتی شماره {cheque.serial_number or cheque.cheque_number or ''} - طرف حساب: {cheque.person.full_name if cheque.person else '---'}"
+        tx_desc = f"وصول چک دریافتی شماره {cheque.sayad_number or cheque.cheque_number or ''} - طرف حساب: {cheque.person.full_name if cheque.person else '---'}"
     else:
         account.balance -= cheque.amount
         tx_type = TransactionType.EXPENSE if hasattr(TransactionType, 'EXPENSE') else "EXPENSE"
-        tx_desc = f"پاس شدن چک پرداختی شماره {cheque.serial_number or cheque.cheque_number or ''} - طرف حساب: {cheque.person.full_name if cheque.person else '---'}"
+        tx_desc = f"پاس شدن چک پرداختی شماره {cheque.sayad_number or cheque.cheque_number or ''} - طرف حساب: {cheque.person.full_name if cheque.person else '---'}"
 
     cheque.status = ChequeStatus.CLEARED if hasattr(ChequeStatus, 'CLEARED') else "CLEARED"
     cheque.account_id = account_id
