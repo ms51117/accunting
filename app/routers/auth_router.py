@@ -5,6 +5,22 @@ from app.auth import create_session_token, COOKIE_NAME
 
 router = APIRouter(tags=["Auth"])
 templates = Jinja2Templates(directory="app/templates")
+def format_rial(value):
+    if value is None:
+        return "0"
+    try:
+        return f"{int(value):,}"
+    except (ValueError, TypeError):
+        return str(value)
+
+def format_jalali(value):
+    if not value:
+        return "-"
+    return str(value)
+
+# ۳. ثبت فیلترها روی محیط Jinja2
+templates.env.filters["rial"] = format_rial
+templates.env.filters["jalali"] = format_jalali
 
 
 @router.get("/login")
