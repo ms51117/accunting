@@ -22,7 +22,7 @@ class Cheque(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     type = Column(String(20), nullable=False)  # RECEIVABLE یا PAYABLE
-    cheque_number = Column(String(50), nullable=False)
+    cheque_number = Column(String(50), nullable=True)
     sayad_number = Column(String(50), nullable=True)  # شناسه صیاد
     bank_name = Column(String(50), nullable=True)
     amount = Column(BigInteger, nullable=False)

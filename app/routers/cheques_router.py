@@ -62,7 +62,7 @@ def create_cheque(
     account_id: int = Form(None),
     issue_date: str = Form(None),
     serial_number: str = Form(None),
-    sayad_id: str = Form(None),
+    sayad_number: str = Form(None),
     bank_name: str = Form(None),
     description: str = Form(None),
     db: Session = Depends(get_db)
@@ -86,8 +86,8 @@ def create_cheque(
         amount=amount,
         due_date=g_due_date,
         issue_date=g_issue_date,
-        serial_number=serial_number.strip() if serial_number else None,
-        sayad_id=sayad_id.strip() if sayad_id else None,
+        cheque_number=serial_number.strip() if serial_number else None,
+        sayad_number=sayad_number.strip() if sayad_number else None,
         bank_name=bank_name.strip() if bank_name else None,
         description=description.strip() if description else None,
         status="PENDING"
