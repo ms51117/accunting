@@ -15,5 +15,12 @@ class Account(Base):
     balance = Column(BigInteger, default=0) # موجودی به ریال
     created_at = Column(DateTime, default=func.now())
 
-    transactions = relationship("Transaction", back_populates="account")
+    # transactions = relationship("Transaction", back_populates="account")
     cheques = relationship("Cheque", back_populates="account")
+
+    # ✅ اصلاح این خط: اضافه کردن foreign_keys="Transaction.account_id"
+    transactions = relationship(
+        "Transaction",
+        foreign_keys="Transaction.account_id",
+        back_populates="account"
+    )

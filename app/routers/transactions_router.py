@@ -197,9 +197,15 @@ def update_transaction(
 @router.post("/{trans_id}/delete")
 def delete_transaction(trans_id: int, db: Session = Depends(get_db)):
     tx = db.query(Transaction).filter(Transaction.id == trans_id).first()
-    if tx:
-        revert_transaction_balance(db, tx)
-        db.delete(tx)
-        db.commit()
+    if not tx:
+        return RedirectResponse(url="/transactions", status_code=303)
 
+    # جلوگیری از حذف تراکنش‌های وابسته به چک یا تسویه
+    if getattr(tx, "cheque_id", None) or getattr(tx, "debt_id", None):
+        # این تراکنش از بخش چک یا تسویه ایجاد شده و باید از همان مبدا مدیریت/ابطال شود
+        return RedirectResponse(url="/transactions?error=linked_transaction", status_code=303)
+
+    revert_transaction_balance(db, tx)
+    db.delete(tx)
+    db.commit()
     return RedirectResponse(url="/transactions", status_code=303)
