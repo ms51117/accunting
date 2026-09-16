@@ -53,7 +53,6 @@ def list_debts(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/create")
 def create_debt(
-
         type: str = Form(...),  # RECEIVABLE (طلب ما از شخص), PAYABLE (بدهی ما به شخص)
         person_id: int = Form(...),
         amount: int = Form(...),
@@ -61,6 +60,12 @@ def create_debt(
         description: str = Form(None),
         db: Session = Depends(get_db)
 ):
+    # ۱. اعتبارسنجی مبلغ
+    if amount <= 0:
+        return RedirectResponse(
+            url="/debts?error=invalid_amount",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
 
     g_due_date = None
     if due_date:
@@ -95,6 +100,13 @@ def update_debt(
     description: str = Form(None),
     db: Session = Depends(get_db)
 ):
+    # ۱. اعتبارسنجی مبلغ
+    if amount <= 0:
+        return RedirectResponse(
+            url="/debts?error=invalid_amount",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
     debt = db.query(Debt).filter(Debt.id == debt_id).first()
     if not debt:
         raise HTTPException(status_code=404, detail="رکورد یافت نشد")
@@ -147,6 +159,20 @@ def pay_debt_installment(
 
     if not debt or not account or pay_amount <= 0:
         return responses.RedirectResponse(url="/debts", status_code=status.HTTP_302_FOUND)
+
+    # ۳. بررسی وضعیت بدهی (آیا از قبل تسویه شده؟)
+    remaining_balance = debt.amount - debt.paid_amount
+    if debt.status == "SETTLED" or remaining_balance <= 0:
+        return RedirectResponse(
+            url="/debts?error=already_settled",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+    if pay_amount > remaining_balance:
+        return RedirectResponse(
+            url="/debts?error=amount_exceeds_remaining",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
 
     # به‌روزرسانی مانده طلب/بدهی
     debt.paid_amount += pay_amount

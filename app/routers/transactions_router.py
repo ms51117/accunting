@@ -5,12 +5,16 @@ from sqlalchemy.orm import Session
 from datetime import date, datetime
 import jdatetime
 
+from starlette import status
+
 from app.database import get_db
 from app.models.account import Account
 from app.models.person import Person
 from app.models.transaction import Transaction
 from app.auth import get_current_user
 from app.utils.jalali import parse_jalali_str
+
+from app.models.transaction import TransactionType
 
 router = APIRouter(prefix="/transactions", tags=["Transactions"], dependencies=[Depends(get_current_user)])
 templates = Jinja2Templates(directory="app/templates")
@@ -112,6 +116,32 @@ def create_transaction(
         description: str = Form(None),
         db: Session = Depends(get_db)
 ):
+
+    # ۱. اعتبارسنجی مبلغ
+    if amount <= 0:
+        return RedirectResponse(
+            url="/transactions?error=invalid_amount",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+
+
+    # ۳. اعتبارسنجی حساب مبدأ
+    account = (
+        db.query(Account)
+        .filter(Account.id == account_id)
+        .with_for_update()
+        .first()
+    )
+    if not account:
+        return RedirectResponse(
+            url="/transactions?error=source_account_not_found",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+
+
+
     real_date = parse_date_input(trans_date)
     src_account = db.query(Account).filter(Account.id == account_id).first()
     if not src_account:
@@ -160,6 +190,29 @@ def update_transaction(
         description: str = Form(None),
         db: Session = Depends(get_db)
 ):
+    # ۱. اعتبارسنجی مبلغ
+    if amount <= 0:
+        return RedirectResponse(
+            url="/transactions?error=invalid_amount",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+
+
+    # ۳. اعتبارسنجی حساب مبدأ
+    account = (
+        db.query(Account)
+        .filter(Account.id == account_id)
+        .with_for_update()
+        .first()
+    )
+    if not account:
+        return RedirectResponse(
+            url="/transactions?error=source_account_not_found",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
+
     tx = db.query(Transaction).filter(Transaction.id == trans_id).first()
     if not tx:
         return RedirectResponse(url="/transactions", status_code=303)
