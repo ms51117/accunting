@@ -39,3 +39,5 @@ class Cheque(Base):
 
     person = relationship("Person", back_populates="cheques")
     account = relationship("Account", back_populates="cheques")
+    transactions = relationship("Transaction", back_populates="cheque", cascade="all, delete-orphan")
+

@@ -1,4 +1,5 @@
-from datetime import date
+from datetime import date, datetime
+
 from sqlalchemy.orm import Session
 from app.models.cheque import Cheque, ChequeStatus, ChequeType
 from app.models.account import Account
@@ -37,13 +38,13 @@ def clear_cheque(db: Session, cheque_id: int, target_account_id: int = None) -> 
     cheque.account_id = account_id
 
     transaction = Transaction(
-        account_id=account.id,
-        person_id=cheque.person_id,
+        account_id=target_account_id,
+        type=TransactionType.INCOME.value if cheque.type == ChequeType.RECEIVABLE.value else TransactionType.EXPENSE.value,
+        category="وصول چک",
         amount=cheque.amount,
-        type=tx_type,
-        category="چک",
-        trans_date=date.today(),
-        description=tx_desc
+        trans_date=datetime.now().date(),
+        description=f"وصول چک شماره {cheque.cheque_number or cheque.sayad_number}",
+        cheque_id=cheque.id  # <-- اتصال تراکنش به چک
     )
     db.add(transaction)
     db.commit()

@@ -2,6 +2,16 @@ from sqlalchemy import Column, Integer, String, BigInteger, Date, DateTime, Fore
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
+import enum
+
+
+class DebtType(str, enum.Enum):
+    RECEIVABLE = "RECEIVABLE"
+    PAYABLE = "PAYABLE"
+
+class DebtStatus(str, enum.Enum):
+    ACTIVE = "ACTIVE"
+    SETTLED = "SETTLED"
 
 class Debt(Base):
     __tablename__ = "debts"
@@ -17,3 +27,5 @@ class Debt(Base):
     created_at = Column(DateTime, default=func.now())
 
     person = relationship("Person", back_populates="debts")
+    transactions = relationship("Transaction", back_populates="debt", cascade="all, delete-orphan")
+
