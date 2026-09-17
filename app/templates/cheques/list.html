@@ -161,11 +161,11 @@
                                                         </div>
                                                         <div class="col-md-6">
                                                             <label class="form-label">تاریخ سررسید (مثال: 1403/07/01)</label>
-                                                            <input type="text" name="due_date" class="form-control" value="{{ ch.due_date }}" required>
+                                                            <input type="text" name="due_date" class="form-control" data-jdp autocomplete="off" value="{{ ch.due_date | jalali if ch.due_date else '' }}" required>
                                                         </div>
                                                         <div class="col-md-6">
                                                             <label class="form-label">تاریخ صدور</label>
-                                                            <input type="text" name="issue_date" class="form-control" value="{{ ch.issue_date or '' }}">
+                                                            <input type="text" name="issue_date" class="form-control" data-jdp autocomplete="off" value="{{ ch.issue_date | jalali if ch.issue_date else '' }}">
                                                         </div>
                                                         <div class="col-md-6">
                                                             <label class="form-label">نام بانک و شعبه</label>
@@ -262,11 +262,11 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">تاریخ سررسید (مثال: 1403/07/01)</label>
-                            <input type="text" name="due_date" class="form-control" placeholder="1403/07/01" required>
+                            <input type="text" name="due_date" class="form-control" data-jdp autocomplete="off" placeholder="۱۴۰۳/۰۹/۰۱" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">تاریخ صدور</label>
-                            <input type="text" name="issue_date" class="form-control" placeholder="1403/05/01">
+                            <input type="text" name="issue_date" class="form-control" data-jdp autocomplete="off" placeholder="۱۴۰۳/۰۹/۰۱">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">نام بانک و شعبه</label>
