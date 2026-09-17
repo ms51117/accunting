@@ -6,6 +6,9 @@ from fastapi.templating import Jinja2Templates
 from app.database import engine, Base
 from app.config import settings
 from app.utils.jalali import format_rial, to_jalali_str
+from app.routers import backup_router
+
+
 
 # ساخت پوشه دیتابیس اگر وجود نداشت
 os.makedirs("data", exist_ok=True)
@@ -30,6 +33,9 @@ app.include_router(accounts_router.router)
 app.include_router(cheques_router.router)
 app.include_router(debts_router.router)
 app.include_router(transactions_router.router)
+
+app.include_router(backup_router.router)
+
 
 if __name__ == "__main__":
     import uvicorn

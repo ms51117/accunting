@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: accounting_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # مانت کردن پوشه داده‌ها و بک‌آپ جهت ماندگاری اطلاعات روی هاست
+      - ./data:/app/data
+      - ./backups:/app/backups
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite:///data/accounting.db
+      - DATABASE_PATH=data/accounting.db
