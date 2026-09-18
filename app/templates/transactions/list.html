@@ -39,9 +39,9 @@
                         {% endif %}
                     </td>
                     <td class="fw-bold">{{ tx.category }}</td>
-                    <td class="latin-num fw-bold">{{ tx.amount | rial }}</td>
+                    <td class="fw-bold text-primary">{{ tx.amount | rial }}</td>
                     <td>{{ tx.account.title if tx.account else '-' }}</td>
-                    <td class="latin-num text-muted small">{{ tx.trans_date | jalali }}</td>
+                    <td>{{ tx.trans_date | jalali }}</td>
                     <td class="small text-muted">{{ tx.description or '-' }}</td>
                     <td class="text-center">
                         <div class="d-inline-flex gap-1 align-items-center">

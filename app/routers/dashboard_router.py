@@ -1,3 +1,4 @@
+import jdatetime
 from fastapi import APIRouter, Request, Depends
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -22,7 +23,16 @@ def format_rial(value):
 def format_jalali(value):
     if not value:
         return "-"
-    return str(value)
+    try:
+        if isinstance(value, str):
+            # اگر ورودی رشته است، اول به آبجکت تاریخ میلادی تبدیل شود
+            from datetime import datetime
+            value = datetime.strptime(value, "%Y-%m-%d").date()
+        # تبدیل میلادی به شمسی
+        j_date = jdatetime.date.fromgregorian(date=value)
+        return j_date.strftime("%Y/%m/%d")
+    except Exception:
+        return str(value)
 
 # ۳. ثبت فیلترها روی محیط Jinja2
 templates.env.filters["rial"] = format_rial

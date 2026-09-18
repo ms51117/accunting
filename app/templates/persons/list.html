@@ -33,8 +33,8 @@
             <tbody>
                 {% for p in persons %}
                 <tr>
-                    <td class="fw-semibold">{{ p.full_name }}</td>
-                    <td class="latin-num text-muted">{{ p.phone or '-' }}</td>
+                    <td class="fw-bold">{{ p.full_name }}</td>
+                    <td>{{ p.phone or '-' }}</td>
                     <td>
                         {% if p.bank_name %}<span class="badge bg-light text-dark border me-1">{{ p.bank_name }}</span>{% endif %}
                         {% if p.card_number %}<small class="latin-num text-muted d-block">{{ p.card_number }}</small>{% endif %}

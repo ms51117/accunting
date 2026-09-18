@@ -60,27 +60,27 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <div class="btn-group btn-group-sm" role="group">
+                                <div class="d-inline-flex gap-1 align-items-center" role="group">
                                     {% if ch.status == 'PENDING' %}
                                         <!-- وصول چک -->
-                                        <button type="button" class="btn btn-outline-success" title="وصول چک" data-bs-toggle="modal" data-bs-target="#clearModal{{ ch.id }}">
+                                        <button type="button" class="btn btn-sm btn-outline-success p-1 px-2" title="وصول چک" data-bs-toggle="modal" data-bs-target="#clearModal{{ ch.id }}">
                                             <i class="bi bi-check-lg"></i>
                                         </button>
                                         <!-- برگشت چک -->
                                         <form action="/cheques/{{ ch.id }}/bounce" method="post" class="d-inline" onsubmit="return confirm('آیا از برگشت زدن این چک اطمینان دارید؟');">
-                                            <button type="submit" class="btn btn-outline-warning" title="برگشت چک">
+                                            <button type="submit" class="btn btn-sm btn-outline-warning p-1 px-2" title="برگشت چک">
                                                 <i class="bi bi-arrow-counterclockwise"></i>
                                             </button>
                                         </form>
                                     {% endif %}
 
                                     <!-- ویرایش چک -->
-                                    <button type="button" class="btn btn-outline-primary" title="ویرایش چک" data-bs-toggle="modal" data-bs-target="#editChequeModal{{ ch.id }}">
-                                        <i class="bi bi-pencil-square"></i>
+                                    <button type="button" class="btn btn-sm btn-outline-primary p-1 px-2" title="ویرایش چک" data-bs-toggle="modal" data-bs-target="#editChequeModal{{ ch.id }}">
+                                        <i class="bi bi-pencil"></i>
                                     </button>
 
                                     <!-- حذف چک -->
-                                    <button type="button" class="btn btn-outline-danger" title="حذف چک" data-bs-toggle="modal" data-bs-target="#deleteChequeModal{{ ch.id }}">
+                                    <button type="button" class="btn btn-sm btn-outline-danger p-1 px-2" title="حذف چک" data-bs-toggle="modal" data-bs-target="#deleteChequeModal{{ ch.id }}">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>

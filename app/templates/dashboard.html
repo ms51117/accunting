@@ -60,8 +60,8 @@
                                 {% endif %}
                             </td>
                             <td>{{ ch.person.full_name }}</td>
-                            <td class="fw-bold latin-num">{{ ch.amount | rial }}</td>
-                            <td class="latin-num text-muted small">{{ ch.due_date | jalali }}</td>
+                            <td class="fw-bold">{{ ch.amount | rial }}</td>
+                            <td class="text-muted">{{ ch.due_date | jalali }}</td>
                         </tr>
                         {% else %}
                         <tr>
@@ -105,8 +105,8 @@
                             </td>
                             <td>{{ tr.category }}</td>
                             <td class="small">{{ tr.account.title }}</td>
-                            <td class="fw-bold latin-num">{{ tr.amount | rial }}</td>
-                            <td class="latin-num text-muted small">{{ tr.trans_date | jalali }}</td>
+                            <td class="fw-bold">{{ tr.amount | rial }}</td>
+                            <td class="text-muted">{{ tr.trans_date | jalali }}</td>
                         </tr>
                         {% else %}
                         <tr>

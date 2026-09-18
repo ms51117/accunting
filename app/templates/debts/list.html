@@ -39,9 +39,9 @@
                     </td>
                     <td class="fw-bold">{{ d.person.full_name }}</td>
                     <td>{{ d.amount | rial }}</td>
-                    <td class="text-success">{{ d.paid_amount | rial }}</td>
+                    <td class="text-success fw-bold">{{ d.paid_amount | rial }}</td>
                     <td class="text-danger fw-bold">{{ (d.amount - d.paid_amount) | rial }}</td>
-                    <td class="latin-num text-muted small">{{ d.due_date | jalali }}</td>
+                    <td>{{ d.due_date | jalali }}</td>
                     <td>
                         {% if d.status == 'ACTIVE' %}
                             <span class="badge bg-warning-subtle text-warning border border-warning">جاری</span>
