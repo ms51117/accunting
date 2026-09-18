@@ -87,7 +87,7 @@
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label">مبلغ پرداختی (ریال) *</label>
-                                        <input type="number" name="pay_amount" class="form-control" max="{{ d.amount - d.paid_amount }}" min="1000" required>
+                                        <input type="text" name="pay_amount" class="form-control" max="{{ d.amount - d.paid_amount }}" min="1000" required>
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label">حساب مبدأ / مقصد *</label>
@@ -139,7 +139,7 @@
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label">مبلغ کل (ریال) *</label>
-                                        <input type="number" name="amount" value="{{ d.amount }}" class="form-control" min="{{ d.paid_amount }}" required>
+                                        <input type="text" name="amount" value="{{ d.amount }}" class="form-control" min="{{ d.paid_amount }}" required>
                                         <small class="text-muted">مبلغ کل نمی‌تواند کمتر از مبالغ تسویه شده ({{ d.paid_amount | rial }}) باشد.</small>
                                     </div>
                                     <div class="mb-3">
@@ -210,7 +210,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">مبلغ کل (ریال) *</label>
-                        <input type="number" name="amount" class="form-control" min="1000" required>
+                        <input type="text" name="amount" class="form-control" min="1000" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">تاریخ سررسید (اختیاری)</label>
