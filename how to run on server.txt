@@ -1,0 +1,5 @@
+go to your dir
+
+git clone <git ripo>
+git pull
+docker compose up -d --build

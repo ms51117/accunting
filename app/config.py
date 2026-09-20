@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     HTTP_PROXY: Optional[str] = None
     HTTPS_PROXY: Optional[str] = None
 
+    CLOUDFLARE_TUNNEL_ENABLED: bool = True
+    APP_PORT: int = 8000
+
     # تنظیمات Pydantic V2
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -7,7 +7,10 @@ from app.database import engine, Base
 from app.config import settings
 from app.utils.jalali import format_rial, to_jalali_str
 from app.routers import backup_router
-
+import asyncio
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from tunnel_service import tunnel_service
 
 
 # ساخت پوشه دیتابیس اگر وجود نداشت
@@ -16,7 +19,25 @@ os.makedirs("data", exist_ok=True)
 # ساخت جداول دیتابیس
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title=settings.APP_NAME)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # شروع تونل در پس‌زمینه همزمان با بالا آمدن FastAPI
+    tunnel_task = asyncio.create_task(tunnel_service.start())
+    yield
+    # بستن تونل هنگام خاموش شدن برنامه
+    tunnel_task.cancel()
+    try:
+        await tunnel_task
+    except asyncio.CancelledError:
+        pass
+
+app = FastAPI(
+    title=settings.APP_NAME,
+    lifespan=lifespan
+)
+
+
+
 
 # تنظیم موتور Jinja2 و افزودن فیلترها
 templates = Jinja2Templates(directory="app/templates")
