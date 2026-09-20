@@ -40,4 +40,4 @@ app.include_router(backup_router.router)
 if __name__ == "__main__":
     import uvicorn
     # اجرا روی پورت 8000 با دسترسی عمومی
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)

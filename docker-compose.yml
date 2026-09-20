@@ -4,15 +4,11 @@ services:
   web:
     build: .
     container_name: accounting_app
-    restart: unless-stopped
+    restart: always
     ports:
       - "8000:8000"
-    volumes:
-      # مانت کردن پوشه داده‌ها و بک‌آپ جهت ماندگاری اطلاعات روی هاست
-      - ./data:/app/data
-      - ./backups:/app/backups
     env_file:
       - .env
-    environment:
-      - DATABASE_URL=sqlite:///data/accounting.db
-      - DATABASE_PATH=data/accounting.db
+    volumes:
+      - .:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
