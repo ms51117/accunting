@@ -133,11 +133,20 @@
                                                 <div class="modal-body">
                                                     <div class="row g-3">
                                                         <div class="col-md-6">
-                                                            <label class="form-label">نوع چک</label>
-                                                            <select name="cheque_type" class="form-select" required>
-                                                                <option value="RECEIVABLE" {% if ch.type == 'RECEIVABLE' %}selected{% endif %}>چک دریافتی (از دیگران)</option>
-                                                                <option value="PAYABLE" {% if ch.type == 'PAYABLE' %}selected{% endif %}>چک پرداختی (دسته چک ما)</option>
-                                                            </select>
+                                                            <label class="form-label text-muted small">نوع چک (غیرقابل تغییر)</label>
+
+                                                            {% set is_receivable = (ch.type == 'RECEIVABLE' or (ch.type.value is defined and ch.type.value == 'RECEIVABLE')) %}
+
+                                                            <!-- نمایش گرافیکی و غیرقابل ویرایش بر اساس نوع چک -->
+                                                            <div class="p-2 rounded border fw-bold text-center {{ 'bg-success-subtle text-success border-success' if is_receivable else 'bg-danger-subtle text-danger border-danger' }}">
+                                                                {% if is_receivable %}
+                                                                    <i class="bi bi-arrow-down-left-circle me-1"></i> چک دریافتی (از دیگران)
+                                                                {% else %}
+                                                                    <i class="bi bi-arrow-up-right-circle me-1"></i> چک پرداختی / صادره (به دیگران)
+                                                                {% endif %}
+                                                            </div>
+                                                            <!-- ارسال مقدار نوع به بک‌اند بدون امکان تغییر توسط کاربر -->
+                                                            <input type="hidden" name="cheque_type" value="{{ 'RECEIVABLE' if is_receivable else 'PAYABLE' }}">
                                                         </div>
                                                         <div class="col-md-6">
                                                             <label class="form-label">طرف حساب</label>
