@@ -7,7 +7,7 @@ class Person(Base):
     __tablename__ = "persons"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # <-- شناسه کاربر مالک
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # <-- شناسه کاربر مالک
 
     full_name = Column(String(150), nullable=False, index=True)
     phone = Column(String(30), nullable=True)

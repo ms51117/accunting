@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row g-4">
+        <!-- ۱. دانلود مستقیم -->
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body text-center p-4">
+                    <div class="fs-1 text-primary mb-3"><i class="bi bi-cloud-arrow-down"></i></div>
+                    <h5 class="card-title">دانلود فایل بک‌آپ</h5>
+                    <p class="card-text text-muted small">دریافت فایل استاندارد JSON شامل تمام حساب‌ها، چک‌ها و تراکنش‌های شما.</p>
+                    <a href="/backups/download" class="btn btn-outline-primary w-100 mt-3">
+                        <i class="bi bi-download me-1"></i> دانلود بک‌آپ
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ۲. ارسال به تلگرام -->
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body text-center p-4">
+                    <div class="fs-1 text-info mb-3"><i class="bi bi-telegram"></i></div>
+                    <h5 class="card-title">ارسال به بات تلگرام</h5>
+                    <p class="card-text text-muted small">
+                        {% if has_telegram %}
+                            ارسال مستقیم فایل پشتیبان به اکانت تلگرام شما ({{ current_user.telegram_chat_id }}).
+                        {% else %}
+                            <span class="text-danger">شناسه تلگرام در پروفایل شما ثبت نشده است.</span>
+                        {% endif %}
+                    </p>
+                    <button id="sendTgBtn" class="btn btn-outline-info w-100 mt-3" {% if not has_telegram %}disabled{% endif %}>
+                        <i class="bi bi-send me-1"></i> ارسال به تلگرام من
+                    </button>
+                    <div id="tgStatus" class="small mt-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ۳. بازیابی (Restore) -->
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body text-center p-4">
+                    <div class="fs-1 text-warning mb-3"><i class="bi bi-cloud-arrow-up"></i></div>
+                    <h5 class="card-title">بازیابی فایل بک‌آپ</h5>
+                    <p class="card-text text-muted small">فایل JSON قبلی را برای بازنشانی کامل اطلاعات انتخاب کنید.</p>
+                    <form id="restoreForm" enctype="multipart/form-data">
+                        <input type="file" name="file" id="backupFileInput" class="form-control form-control-sm mb-2" accept=".json" required>
+                        <button type="submit" class="btn btn-warning w-100" onclick="return confirm('هشدار: اطلاعات فعلی شما با داده‌های این فایل جایگزین خواهد شد. آیا مطمئن هستید؟')">
+                            <i class="bi bi-arrow-repeat me-1"></i> بازگردانی اطلاعات
+                        </button>
+                    </form>
+                    <div id="restoreStatus" class="small mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ارسال به تلگرام
+document.getElementById('sendTgBtn')?.addEventListener('click', async () => {
+    const statusDiv = document.getElementById('tgStatus');
+    statusDiv.innerHTML = '<span class="text-secondary">در حال ارسال...</span>';
+    try {
+        const res = await fetch('/backups/send-telegram', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            statusDiv.innerHTML = '<span class="text-success">با موفقیت به تلگرام ارسال شد!</span>';
+        } else {
+            statusDiv.innerHTML = `<span class="text-danger">${data.detail || 'خطا در ارسال'}</span>`;
+        }
+    } catch (e) {
+        statusDiv.innerHTML = '<span class="text-danger">خطا در ارتباط با سرور.</span>';
+    }
+});
+
+// بازگردانی اطلاعات
+document.getElementById('restoreForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const statusDiv = document.getElementById('restoreStatus');
+    const formData = new FormData(e.target);
+    statusDiv.innerHTML = '<span class="text-secondary">در حال پردازش و بازگردانی...</span>';
+    try {
+        const res = await fetch('/backups/restore', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (res.ok) {
+            alert('اطلاعات با موفقیت بازگردانی شد.');
+            window.location.reload();
+        } else {
+            statusDiv.innerHTML = `<span class="text-danger">${data.detail || 'خطا در بازگردانی'}</span>`;
+        }
+    } catch (e) {
+        statusDiv.innerHTML = '<span class="text-danger">خطا در ارسال فایل.</span>';
+    }
+});
+</script>
+{% endblock %}

@@ -17,7 +17,7 @@ class Debt(Base):
     __tablename__ = "debts"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # <-- شناسه کاربر مالک
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # <-- شناسه کاربر مالک
 
     type = Column(String(20), nullable=False) # 'RECEIVABLE' (طلبکاری ما از شخص), 'PAYABLE' (بدهکاری ما به شخص)
     person_id = Column(Integer, ForeignKey("persons.id"), nullable=False)

@@ -20,7 +20,7 @@ class Transaction(Base):
     destination_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True)
 
     # کلیدهای خارجی اسناد و اشخاص
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # <-- شناسه کاربر مالک
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # <-- شناسه کاربر مالک
 
     person_id = Column(Integer, ForeignKey("persons.id"), nullable=True)
     debt_id = Column(Integer, ForeignKey("debts.id"), nullable=True)

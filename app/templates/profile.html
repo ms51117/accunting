@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}پروفایل کاربری{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- پیام‌های سیستم -->
+    {% if error %}
+    <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+    {% if success %}
+    <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>{{ success }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- بخش ۱: مشخصات کاربر جاری (قابل دسترسی برای همه کاربران) -->
+        <div class="col-12 {% if is_admin %}col-lg-5{% else %}col-lg-6 mx-auto{% endif %}">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-header bg-primary text-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-person-gear me-2"></i>ویرایش مشخصات من</h6>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" action="/profile/update-info">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">نام و نام خانوادگی</label>
+                            <input type="text" name="full_name" class="form-control" value="{{ current_user.full_name or '' }}" placeholder="نام خود را وارد کنید" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">نام کاربری</label>
+                            <input type="text" name="new_username" class="form-control" value="{{ current_user.username }}">
+                        </div>
+
+                        <hr class="my-4 text-muted">
+                        <p class="small text-muted mb-3"><i class="bi bi-shield-lock me-1"></i>در صورت تمایل به تغییر رمز، فیلدهای زیر را پر کنید:</p>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">کلمه عبور جدید</label>
+                            <input type="password" name="new_password" class="form-control" placeholder="حداقل ۴ کاراکتر">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">تکرار کلمه عبور جدید</label>
+                            <input type="password" name="confirm_password" class="form-control">
+                        </div>
+
+                        <div class="mb-4 pt-2 border-top">
+                            <label class="form-label small fw-bold text-danger">کلمه عبور فعلی (جهت تایید هویت) <span class="text-danger">*</span></label>
+                            <input type="password" name="current_password" class="form-control" required placeholder="رمز فعلی خود را وارد کنید">
+                        </div>
+
+                        <!-- فیلد شناسه تلگرام -->
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">شناسه عددی تلگرام (Chat ID)</label>
+                            <input type="text" name="telegram_chat_id"
+                                   value="{{ current_user.telegram_chat_id or '' }}"
+                                   placeholder="مثال: 123456789"
+                                   class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-sm transition text-left font-mono" dir="ltr">
+                            <p class="text-[11px] text-slate-400 mt-1">جهت دریافت بک‌آپ در تلگرام (شناسه را از ربات <span class="text-indigo-600 font-mono">@userinfobot</span> بگیرید)</p>
+                        </div>
+
+
+                        <button type="submit" class="btn btn-primary w-100 py-2">
+                            <i class="bi bi-check2-circle me-1"></i> ذخیره تغییرات
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- بخش ۲: پنل اختصاصی مدیر اصلی (افزودن کاربر و جدول نظارتی) -->
+        {% if is_admin %}
+        <div class="col-12 col-lg-7">
+            <!-- فرم ساخت کاربر جدید -->
+            <div class="card shadow-sm border-0 mb-4 rounded-3">
+                <div class="card-header bg-success text-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-person-plus-fill me-2"></i>افزودن کاربر جدید به سیستم</h6>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" action="/profile/create-user" class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">نام و نام خانوادگی</label>
+                            <input type="text" name="full_name" class="form-control" placeholder="مثال: علی رضایی">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold"> نام کاربری <span class="text-danger">*</span></label>
+                            <input type="text" name="username" class="form-control" required placeholder="مثال: ali_r">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label small fw-bold">کلمه عبور اولیه <span class="text-danger">*</span></label>
+                            <input type="password" name="password" class="form-control" required minlength="4">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-success w-100 py-2">
+                                <i class="bi bi-plus-circle me-1"></i> ثبت و ایجاد حساب
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- جدول وضعیت کاربران، نقدینگی و آخرین بازدید -->
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-people-fill me-2"></i>لیست کاربران و وضعیت نقدینگی</h6>
+                    <span class="badge bg-secondary">{{ users_data|length }} کاربر</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 text-center" style="font-size: 0.9rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th>نام و نام خانوادگی</th>
+                                <th>نام کاربری</th>
+                                <th>کل نقدینگی (تومان)</th>
+                                <th>آخرین بازدید</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in users_data %}
+                            <tr>
+                                <td class="fw-bold text-end pe-3">
+                                    {{ u.full_name }}
+                                    {% if u.id == current_user.id %}
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" style="font-size: 0.75rem;">مدیر (شما)</span>
+                                    {% endif %}
+                                </td>
+                                <td><code>{{ u.username }}</code></td>
+                                <td class="text-success fw-bold">
+                                    {{ "{:,}".format(u.total_balance) }}
+                                </td>
+                                <td class="text-muted small">
+                                    {% if u.last_seen %}
+                                        {{ u.last_seen.strftime('%Y/%m/%d - %H:%M') }}
+                                    {% else %}
+                                        ---
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

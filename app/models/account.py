@@ -8,7 +8,7 @@ class Account(Base):
     __tablename__ = "accounts"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # <-- شناسه کاربر مالک
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # <-- شناسه کاربر مالک
 
     title = Column(String(100), nullable=False) # مثلا: بانک ملی، پاسارگاد، صندوق منزل
     bank_name = Column(String(50), nullable=True)

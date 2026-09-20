@@ -1,20 +1,28 @@
-# Configuration settings
-from pydantic_settings import BaseSettings
+from typing import Optional
+from dotenv import load_dotenv
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+load_dotenv()
 
 
 class Settings(BaseSettings):
-    APP_NAME: str = "مدیریت مالی شخصی"
-    SECRET_KEY: str = "CHANGE_THIS_TO_A_SECURE_RANDOM_KEY_123456"
+    APP_NAME: str = "سامانه حسابداری شخصی"
+    SECRET_KEY: str = "GAPGPTMASKTOKENqhyg1wv8moX0X"
     ADMIN_USERNAME: str = "admin"
-    ADMIN_PASSWORD: str = "MS511@secure"  # پسورد ورود را تغییر دهید
-
-    # برای SQLite از این مسیر استفاده می‌شود.
-    # در آینده فقط کافیست این مقدار را با PostgreSQL عوض کنید:
-    # DATABASE_URL: str = "postgresql://user:pass@localhost:5432/dbname"
+    ADMIN_PASSWORD: str = "admin"
     DATABASE_URL: str = "sqlite:///./data/accounting.db"
 
-    class Config:
-        env_file = ".env"
+    # فیلدهای تلگرام و پروکسی (با حروف بزرگ و یکدست)
+    TELEGRAM_BOT_TOKEN: Optional[str] = None
+    HTTP_PROXY: Optional[str] = None
+    HTTPS_PROXY: Optional[str] = None
+
+    # تنظیمات Pydantic V2
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"  # متغیرهای اضافی در env باعث خطا نمی‌شوند
+    )
 
 
 settings = Settings()

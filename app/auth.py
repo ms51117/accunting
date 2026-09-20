@@ -55,3 +55,9 @@ def get_current_user(
         )
 
     return user
+
+def is_admin_user(user: User) -> bool:
+    """تشخیص اکانت اصلی: کاربر اول سیستم یا منطبق با تنظیمات env"""
+    admin_user = getattr(settings, "ADMIN_USERNAME", "admin")
+    return user.id == 1 or user.username == admin_user
+
