@@ -142,6 +142,7 @@ def backup_page(
         name="backup.html",
         context={
             "current_user": current_user,
+            "user": current_user,
             "has_telegram": bool(current_user.telegram_chat_id)
         }
     )

@@ -60,12 +60,17 @@
                 </ul>
 
                 <div class="d-flex align-items-center gap-2">
+                    <!-- نمایش نام کاربر و لینک پروفایل -->
+                    {% if user %}
+                    <a href="/profile" class="btn btn-outline-info btn-sm" title=" پروفایل">
+                        <i class="bi bi-person-circle"></i>{{ user.username }}
+                    </a>
+                    {% endif %}
+
                     <a href="/backups" class="btn btn-outline-info btn-sm">
                         <i class="bi bi-download"></i> دریافت فایل پشتیبان دیتابیس
                     </a>
-                    <a href="/profile" class="btn btn-outline-info btn-sm">
-                        <i class="bi bi-key"></i>پروفایل
-                    </a>
+
                     <a href="/logout" class="btn btn-outline-light btn-sm">
                         <i class="bi bi-box-arrow-right"></i> خروج
                     </a>
@@ -76,6 +81,30 @@
     </nav>
 
     <main class="container my-4">
+
+        <!-- نمایش پیام‌های خطا و موفقیت -->
+        {% if request.query_params.get('error') %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            {% if request.query_params.get('error') == 'has_dependencies' %}
+                این مورد به دلیل داشتن تراکنش یا چک متصل قابل حذف نیست.
+            {% elif request.query_params.get('error') == 'not_found' %}
+                مورد نظر یافت نشد.
+            {% else %}
+                {{ request.query_params.get('error') }}
+            {% endif %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+
+        {% if request.query_params.get('msg') %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>{{ request.query_params.get('msg') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+
+
         {% block content %}{% endblock %}
     </main>
 

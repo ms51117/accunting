@@ -8,6 +8,9 @@ from app.database import get_db
 from app.auth import get_current_user
 from app.models.account import Account
 from fastapi import HTTPException
+
+from app.models.cheque import Cheque
+from app.models.transaction import Transaction
 from app.models.user import User
 
 router = APIRouter(prefix="/accounts", tags=["Accounts"], dependencies=[Depends(get_current_user)])
@@ -91,10 +94,27 @@ def edit_account(
 
 
 @router.post("/{account_id}/delete")
-def delete_account(account_id: int, db: Session = Depends(get_db),current_user: User = Depends(get_current_user)
+def delete_account(
+        account_id: int,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
 ):
     acc = db.query(Account).filter(Account.id == account_id, Account.user_id == current_user.id).first()
-    if acc:
-        db.delete(acc)
-        db.commit()
-    return responses.RedirectResponse(url="/accounts", status_code=status.HTTP_302_FOUND)
+    if not acc:
+        raise HTTPException(status_code=404, detail="حساب یافت نشد")
+
+    # بررسی وجود تراکنش یا چک متصل به حساب
+    has_transactions = db.query(Transaction).filter(
+        (Transaction.account_id == account_id) | (Transaction.destination_account_id == account_id)
+    ).first()
+
+    has_cheques = db.query(Cheque).filter(Cheque.account_id == account_id).first()
+
+    if has_transactions or has_cheques:
+        # برای جلوگیری از خطای دیتابیس و تخریب تاریخچه مالی، اجازه حذف داده نمی‌شود
+        # در صورت تمایل می‌توانید پیام خطا را از طریق Session یا QueryParam به UI بفرستید
+        return RedirectResponse(url="/accounts?error=has_dependencies", status_code=302)
+
+    db.delete(acc)
+    db.commit()
+    return RedirectResponse(url="/accounts", status_code=302)
