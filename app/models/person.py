@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -7,6 +7,8 @@ class Person(Base):
     __tablename__ = "persons"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # <-- شناسه کاربر مالک
+
     full_name = Column(String(150), nullable=False, index=True)
     phone = Column(String(30), nullable=True)
     sheba = Column(String(34), nullable=True)      # شماره شبا
@@ -17,3 +19,5 @@ class Person(Base):
 
     cheques = relationship("Cheque", back_populates="person")
     debts = relationship("Debt", back_populates="person")
+    user = relationship("User", back_populates="person")
+

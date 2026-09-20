@@ -117,7 +117,7 @@
 
         // انتخاب تمام فیلدهای مبلغ
         function applyCurrencyMask() {
-            const inputs = document.querySelectorAll('input.currency-input, input[name="amount"], input[name="pay_amount"], input[name="balance"]');
+            const inputs = document.querySelectorAll('input.currency-input, input[name="amount"], input[name="pay_amount"], input[name="balance"],input[name="paid_amount"]');
 
             inputs.forEach(input => {
                 // تغییر تایپ به text برای اجازه دادن به کاما
@@ -148,7 +148,7 @@
         // حذف کاماها قبل از ارسال فرم به بک‌اند تا پایتون خطا نگیرد
         document.querySelectorAll("form").forEach(form => {
             form.addEventListener("submit", function () {
-                const inputs = this.querySelectorAll('input.currency-input, input[name="amount"], input[name="pay_amount"], input[name="balance"]');
+                const inputs = this.querySelectorAll('input.currency-input, input[name="amount"], input[name="pay_amount"], input[name="balance"],input[name="paid_amount"]');
                 inputs.forEach(input => {
                     input.value = toEnglishDigits(input.value).replace(/\D/g, "");
                 });

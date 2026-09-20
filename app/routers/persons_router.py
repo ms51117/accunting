@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
+from app.models.user import User
 
 router = APIRouter(prefix="/persons", tags=["Persons"], dependencies=[Depends(get_current_user)])
 templates = Jinja2Templates(directory="app/templates")
@@ -28,8 +29,8 @@ templates.env.filters["rial"] = format_rial
 templates.env.filters["jalali"] = format_jalali
 
 @router.get("")
-def list_persons(request: Request, search: str = None, db: Session = Depends(get_db)):
-    query = db.query(Person)
+def list_persons(request: Request, search: str = None, db: Session = Depends(get_db),current_user: User = Depends(get_current_user)):
+    query = db.query(Person).filter(Person.user_id == current_user.id)
     if search:
         query = query.filter(Person.full_name.contains(search.strip()) | Person.phone.contains(search.strip()))
     persons = query.order_by(Person.id.desc()).all()
@@ -37,8 +38,8 @@ def list_persons(request: Request, search: str = None, db: Session = Depends(get
         request=request,
         name="persons/list.html",
         context={"persons": persons,
-        "search": search or ""
-
+        "search": search or "",
+        "user": current_user
     })
 
 @router.post("/create")
@@ -49,9 +50,11 @@ def create_person(
     card_number: str = Form(None),
     sheba: str = Form(None),
     notes: str = Form(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     person = Person(
+        user_id=current_user.id,
         full_name=full_name.strip(),
         phone=phone.strip() if phone else None,
         bank_name=bank_name.strip() if bank_name else None,
@@ -72,9 +75,10 @@ def edit_person(
     card_number: str = Form(None),
     sheba: str = Form(None),
     notes: str = Form(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    person = db.query(Person).filter(Person.id == person_id).first()
+    person = db.query(Person).filter(Person.id == person_id,Person.user_id== current_user.id).first()
     if not person:
         raise HTTPException(status_code=404, detail="شخص مورد نظر یافت نشد")
 
@@ -89,8 +93,8 @@ def edit_person(
     return RedirectResponse(url="/persons", status_code=status.HTTP_303_SEE_OTHER)
 
 @router.post("/{person_id}/delete")
-def delete_person(person_id: int, db: Session = Depends(get_db)):
-    person = db.query(Person).filter(Person.id == person_id).first()
+def delete_person(person_id: int, db: Session = Depends(get_db),current_user: User = Depends(get_current_user)):
+    person = db.query(Person).filter(Person.id == person_id,Person.user_id == current_user.id).first()
     if person:
         db.delete(person)
         db.commit()

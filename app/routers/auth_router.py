@@ -1,115 +1,91 @@
-from fastapi import APIRouter, Request, Form, Depends, responses, status
+import hashlib
+import secrets
+from fastapi import APIRouter, Request, Depends, Form, status
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.database import get_db
-from app.auth import create_session_token, COOKIE_NAME, get_current_user
+from app.config import settings
+from app.auth import create_session_token, verify_session_token, get_current_user, COOKIE_NAME
 
-# ایمپورت مدل User (پشتیبانی از هر دو حالت قرارگیری مدل)
 try:
-    from app.models import User
-except ImportError:
     from app.models.user import User
+except ImportError:
+    from app.models import User
 
+# استفاده از bcrypt در صورت نصب بودن، با fallback به sha256_salt
 try:
     import bcrypt
-
     def get_password_hash(password: str) -> str:
-        # bcrypt محدودیت ۷۲ بایتی دارد؛ برش دستی برای جلوگیری از خطای طول
-        pw_bytes = password.encode('utf-8')[:72]
-        salt = bcrypt.gensalt()
-        return bcrypt.hashpw(pw_bytes, salt).decode('utf-8')
+        pwd_bytes = password.encode('utf-8')[:72]
+        return bcrypt.hashpw(pwd_bytes, bcrypt.gensalt()).decode('utf-8')
 
     def verify_password(plain_password: str, hashed_password: str) -> bool:
         try:
-            pw_bytes = plain_password.encode('utf-8')[:72]
-            h_bytes = hashed_password.encode('utf-8')
-            return bcrypt.checkpw(pw_bytes, h_bytes)
+            pwd_bytes = plain_password.encode('utf-8')[:72]
+            return bcrypt.checkpw(pwd_bytes, hashed_password.encode('utf-8'))
         except Exception:
             return False
-
 except ImportError:
-    import hashlib
-    import secrets
-
     def get_password_hash(password: str) -> str:
         salt = secrets.token_hex(16)
-        h = hashlib.sha256((salt + password).encode("utf-8")).hexdigest()
+        h = hashlib.sha256((salt + password).encode('utf-8')).hexdigest()
         return f"{salt}${h}"
 
     def verify_password(plain_password: str, hashed_password: str) -> bool:
-        if "$" not in hashed_password:
-            return plain_password == hashed_password
-        salt, h = hashed_password.split("$", 1)
-        return hashlib.sha256((salt + plain_password).encode("utf-8")).hexdigest() == h
+        try:
+            if "$" not in hashed_password:
+                return False
+            salt, h = hashed_password.split("$", 1)
+            expected = hashlib.sha256((salt + plain_password).encode('utf-8')).hexdigest()
+            return secrets.compare_digest(h, expected)
+        except Exception:
+            return False
 
-
-router = APIRouter(tags=["Auth"])
+router = APIRouter(tags=["auth"])
 templates = Jinja2Templates(directory="app/templates")
 
-# فیلترهای قالب Jinja2
-def format_rial(value):
-    try:
-        return f"{int(value):,}"
-    except (ValueError, TypeError):
-        return str(value)
-
-def format_jalali(value):
-    return str(value)
-
-templates.env.filters["rial"] = format_rial
-templates.env.filters["jalali"] = format_jalali
-
-
-# ==========================================
-# ورود (Login)
-# ==========================================
-
-@router.get("/login")
+# --- صفحه لاگین ---
+@router.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="login.html",
-        context={"request": request, "error": None}
-    )
-
+    token = request.cookies.get(COOKIE_NAME)
+    if token and verify_session_token(token):
+        return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+    return templates.TemplateResponse(request=request,name="login.html",context= {"error": None})
 
 @router.post("/login")
-def login_action(
+def login_post(
     request: Request,
     username: str = Form(...),
     password: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    # جستجوی کاربر در دیتابیس
-    user = db.query(User).filter(User.username == username.strip()).first()
+    username_clean = username.strip()
+    user = db.query(User).filter(User.username == username_clean).first()
 
-    # ایجاد خودکار اولین کاربر از تنظیمات در صورت خالی بودن دیتابیس
+    # ایجاد خودکار اولین کاربر از روی .env در صورت خالی بودن دیتابیس
     if not user and db.query(User).count() == 0:
-        if username.strip() == settings.ADMIN_USERNAME and password == settings.ADMIN_PASSWORD:
+        admin_u = getattr(settings, "ADMIN_USERNAME", "admin")
+        admin_p = getattr(settings, "ADMIN_PASSWORD", "admin")
+        if username_clean == admin_u and password == admin_p:
             user = User(
-                username=settings.ADMIN_USERNAME,
-                password_hash=get_password_hash(settings.ADMIN_PASSWORD)
+                username=admin_u,
+                password_hash=get_password_hash(admin_p)
             )
             db.add(user)
             db.commit()
             db.refresh(user)
 
-    # بررسی صحت اعتبارنامه
     if not user or not verify_password(password, user.password_hash):
-        return templates.TemplateResponse(
-            request=request,
-            name="login.html",
-            context={
-                "request": request,
-                "error": "نام کاربری یا رمز عبور اشتباه است."
-            }
+        return templates.TemplateResponse(request=request,name="login.html",context=
+            {"error": "نام کاربری یا رمز عبور اشتباه است."},
+            status_code=status.HTTP_400_BAD_REQUEST
         )
 
-    # ساخت توکن سشن و ذخیره در کوکی
-    token = create_session_token(user.username)
-    response = responses.RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+    # ساخت توکن با user_id و username
+    token = create_session_token(user_id=user.id, username=user.username)
+    response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
@@ -119,136 +95,84 @@ def login_action(
     )
     return response
 
-
-# ==========================================
-# خروج (Logout)
-# ==========================================
-
+# --- خروج از حساب ---
 @router.get("/logout")
 def logout():
-    response = responses.RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
-    response.delete_cookie(COOKIE_NAME)
+    response = RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+    response.delete_cookie(key=COOKIE_NAME)
     return response
 
-
-# ==========================================
-# تغییر مشخصات و رمز عبور (Change Password)
-# ==========================================
-
-@router.get("/change-password")
+# --- صفحه تغییر رمز عبور ---
+@router.get("/change-password", response_class=HTMLResponse)
 def change_password_page(
     request: Request,
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     return templates.TemplateResponse(
         request=request,
         name="change_password.html",
         context={
-            "request": request,
-            "current_user": current_user,
+            "user": current_user,
             "error": None,
             "success": None
         }
     )
 
-
 @router.post("/change-password")
-def change_password_action(
+def change_password_post(
     request: Request,
-    old_password: str = Form(...),
-    new_username: str = Form(None),
+    current_password: str = Form(...),
     new_password: str = Form(...),
     confirm_password: str = Form(...),
-    current_user = Depends(get_current_user),
+    new_username: str = Form(None),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # دریافت نام کاربری کاربر جاری
-    current_username = getattr(current_user, "username", str(current_user))
-    user = db.query(User).filter(User.username == current_username).first()
-
-    if not user:
+    def render_error(msg: str):
         return templates.TemplateResponse(
             request=request,
             name="change_password.html",
             context={
-                "request": request,
-                "current_user": current_user,
-                "error": "حساب کاربری یافت نشد!",
+                "user": current_user,
+                "error": msg,
                 "success": None
-            }
+            },
+            status_code=status.HTTP_400_BAD_REQUEST
         )
 
-    # ۱. اعتبارسنجی رمز عبور فعلی
-    if not verify_password(old_password, user.password_hash):
-        return templates.TemplateResponse(
-            request=request,
-            name="change_password.html",
-            context={
-                "request": request,
-                "current_user": current_user,
-                "error": "رمز عبور فعلی وارد شده نادرست است.",
-                "success": None
-            }
-        )
+    if not verify_password(current_password, current_user.password_hash):
+        return render_error("رمز عبور فعلی نادرست است.")
 
-    # ۲. بررسی تطابق رمز جدید و تکرار آن
     if new_password != confirm_password:
-        return templates.TemplateResponse(
-            request=request,
-            name="change_password.html",
-            context={
-                "request": request,
-                "current_user": current_user,
-                "error": "رمز عبور جدید و تکرار آن همخوانی ندارند.",
-                "success": None
-            }
-        )
+        return render_error("رمز عبور جدید با تکرار آن مطابقت ندارد.")
 
-    # ۳. حداقل طول مجاز رمز عبور
     if len(new_password) < 4:
-        return templates.TemplateResponse(
-            request=request,
-            name="change_password.html",
-            context={
-                "request": request,
-                "current_user": current_user,
-                "error": "رمز عبور جدید باید حداقل ۴ کاراکتر باشد.",
-                "success": None
-            }
-        )
+        return render_error("رمز عبور جدید باید حداقل ۴ کاراکتر باشد.")
 
-    # ۴. تغییر نام کاربری (در صورت ارسال و تغییر)
-    if new_username and new_username.strip() and new_username.strip() != user.username:
-        clean_user = new_username.strip()
-        existing = db.query(User).filter(User.username == clean_user, User.id != user.id).first()
-        if existing:
-            return templates.TemplateResponse(
-                request=request,
-                name="change_password.html",
-                context={
-                    "request": request,
-                    "current_user": current_user,
-                    "error": "این نام کاربری از قبل در سیستم وجود دارد.",
-                    "success": None
-                }
-            )
-        user.username = clean_user
+    # تغییر نام کاربری در صورت ارسال
+    target_username = current_user.username
+    if new_username and new_username.strip():
+        u_clean = new_username.strip()
+        if u_clean != current_user.username:
+            existing = db.query(User).filter(User.username == u_clean).first()
+            if existing:
+                return render_error("این نام کاربری قبلاً انتخاب شده است.")
+            current_user.username = u_clean
+            target_username = u_clean
 
-    # ۵. هش کردن و به‌روزرسانی رمز در دیتابیس
-    user.password_hash = get_password_hash(new_password)
+    current_user.password_hash = get_password_hash(new_password)
     db.commit()
-    db.refresh(user)
+    db.refresh(current_user)
 
-    # ساخت توکن جدید متناسب با نام کاربری نهایی
-    token = create_session_token(user.username)
+    # به‌روزرسانی کوکی با توکن جدید
+    token = create_session_token(user_id=current_user.id, username=target_username)
     response = templates.TemplateResponse(
         request=request,
         name="change_password.html",
         context={
-            "request": request,
-            "current_user": user,
+            "user": current_user,
             "error": None,
-            "success": "اطلاعات امنیتی با موفقیت به‌روزرسانی شد."
+            "success": "اطلاعات با موفقیت به‌روزرسانی شد."
         }
     )
     response.set_cookie(

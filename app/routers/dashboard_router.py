@@ -9,6 +9,7 @@ from app.models.account import Account
 from app.models.cheque import Cheque
 from app.models.debt import Debt
 from app.models.transaction import Transaction
+from app.models.user import User
 
 router = APIRouter(tags=["Dashboard"], dependencies=[Depends(get_current_user)])
 templates = Jinja2Templates(directory="app/templates")
@@ -41,34 +42,40 @@ templates.env.filters["jalali"] = format_jalali
 
 
 @router.get("/")
-def dashboard_view(request: Request, db: Session = Depends(get_db)):
+def dashboard_view(request: Request, db: Session = Depends(get_db),current_user: User = Depends(get_current_user)):
     # ۱. موجودی کل حساب‌ها
-    total_balance = db.query(func.coalesce(func.sum(Account.balance), 0)).scalar()
+    accounts = db.query(Account).filter(Account.user_id == current_user.id).all()
+    total_balance = sum(acc.balance or 0 for acc in accounts)
 
     # ۲. وضعیت چک‌های در جریان وصول (PENDING)
-    pending_receivable_cheques = db.query(func.coalesce(func.sum(Cheque.amount), 0)) \
-        .filter(Cheque.type == "RECEIVABLE", Cheque.status == "PENDING").scalar()
+    user_pending_cheques = db.query(Cheque).filter(
+        Cheque.user_id == current_user.id,
+        Cheque.status == "PENDING"
+    ).all()
 
-    pending_payable_cheques = db.query(func.coalesce(func.sum(Cheque.amount), 0)) \
-        .filter(Cheque.type == "PAYABLE", Cheque.status == "PENDING").scalar()
+    pending_receivable_cheques = sum(c.amount or 0 for c in user_pending_cheques if c.type == "RECEIVABLE")
+
+    pending_payable_cheques = sum(c.amount or 0 for c in user_pending_cheques if c.type == "PAYABLE")
 
     # ۳. وضعیت بدهی‌ها و مطالبات فعال (مانده طلب / بدهی)
-    active_debts = db.query(Debt).filter(Debt.status == "ACTIVE").all()
+    active_debts = db.query(Debt).filter(Debt.status == "ACTIVE",Debt.user_id == current_user.id,).all()
     total_receivable_debt = sum((d.amount - d.paid_amount) for d in active_debts if d.type == "RECEIVABLE")
     total_payable_debt = sum((d.amount - d.paid_amount) for d in active_debts if d.type == "PAYABLE")
 
     # ۴. ۱۰ تراکنش اخیر
-    recent_transactions = db.query(Transaction).order_by(Transaction.trans_date.desc(), Transaction.id.desc()).limit(
-        10).all()
+    recent_transactions = (db.query(Transaction)
+                           .filter(Transaction.user_id == current_user.id)
+                           .order_by(Transaction.trans_date.desc(), Transaction.id.desc()).limit(10).all())
 
     # ۵. چک‌های با سررسید نزدیک
-    upcoming_cheques = db.query(Cheque).filter(Cheque.status == "PENDING").order_by(Cheque.due_date.asc()).limit(
-        5).all()
+    upcoming_cheques = db.query(Cheque).filter(Cheque.status == "PENDING",Cheque.user_id == current_user.id).order_by(Cheque.due_date.asc()).limit(
+        10).all()
 
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
         context={"total_balance": total_balance,
+        "user": current_user,
         "pending_receivable_cheques": pending_receivable_cheques,
         "pending_payable_cheques": pending_payable_cheques,
         "total_receivable_debt": total_receivable_debt,

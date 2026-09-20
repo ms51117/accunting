@@ -17,6 +17,8 @@ class Debt(Base):
     __tablename__ = "debts"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # <-- شناسه کاربر مالک
+
     type = Column(String(20), nullable=False) # 'RECEIVABLE' (طلبکاری ما از شخص), 'PAYABLE' (بدهکاری ما به شخص)
     person_id = Column(Integer, ForeignKey("persons.id"), nullable=False)
     amount = Column(BigInteger, nullable=False)
@@ -28,4 +30,6 @@ class Debt(Base):
 
     person = relationship("Person", back_populates="debts")
     transactions = relationship("Transaction", back_populates="debt", cascade="all, delete-orphan")
+    user = relationship("User", back_populates="debts")
+
 

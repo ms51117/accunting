@@ -20,6 +20,8 @@ class Transaction(Base):
     destination_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True)
 
     # کلیدهای خارجی اسناد و اشخاص
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # <-- شناسه کاربر مالک
+
     person_id = Column(Integer, ForeignKey("persons.id"), nullable=True)
     debt_id = Column(Integer, ForeignKey("debts.id"), nullable=True)
     cheque_id = Column(Integer, ForeignKey("cheques.id"), nullable=True)
@@ -47,3 +49,5 @@ class Transaction(Base):
 
     # ۵. چک مرتبط (در صورت وصول/خرج چک)
     cheque = relationship("Cheque", foreign_keys="Transaction.cheque_id")
+
+    user = relationship("User", back_populates="transactions")

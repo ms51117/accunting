@@ -12,7 +12,9 @@ from app.models.account import Account
 from app.models.person import Person
 from app.models.transaction import Transaction
 from app.auth import get_current_user
+from app.models.user import User
 from app.utils.jalali import parse_jalali_str
+from app.utils.parse_amount import parse_int_amount
 
 from app.models.transaction import TransactionType
 
@@ -60,11 +62,11 @@ def parse_date_input(trans_date_str: str) -> date:
         return date.today()
 
 
-def revert_transaction_balance(db: Session, tx: Transaction):
+def revert_transaction_balance(db: Session, tx: Transaction,user_id: int):
     """اثر مالی یک تراکنش را روی حساب‌های مبدأ و مقصد خنثی می‌کند."""
-    src_account = db.query(Account).filter(Account.id == tx.account_id).first()
+    src_account = db.query(Account).filter(Account.id == tx.account_id,Account.user_id == user_id).first()
     dest_id = getattr(tx, "destination_account_id", None)
-    dest_account = db.query(Account).filter(Account.id == dest_id).first() if dest_id else None
+    dest_account = db.query(Account).filter(Account.id == dest_id,Account.user_id == user_id).first() if dest_id else None
 
     if tx.type == "INCOME" and src_account:
         src_account.balance -= tx.amount
@@ -90,16 +92,17 @@ def apply_transaction_balance(db: Session, trans_type: str, amount: int, src_acc
 
 
 @router.get("")
-def list_transactions(request: Request, db: Session = Depends(get_db)):
-    transactions = db.query(Transaction).order_by(Transaction.trans_date.desc(), Transaction.id.desc()).all()
-    accounts = db.query(Account).all()
-    persons = db.query(Person).all()
+def list_transactions(request: Request, db: Session = Depends(get_db),current_user: User = Depends(get_current_user)):
+    transactions = db.query(Transaction).filter(Transaction.user_id == current_user.id).order_by(Transaction.trans_date.desc(), Transaction.id.desc()).all()
+    accounts = db.query(Account).filter(Account.user_id == current_user.id).all()
+    persons = db.query(Person).filter(Person.user_id == current_user.id).all()
     return templates.TemplateResponse(request= request,name="transactions/list.html",context= {
 
             "transactions": transactions,
             "accounts": accounts,
             "persons": persons,
-            "today_jalali": jdatetime.date.today().strftime("%Y/%m/%d")
+            "today_jalali": jdatetime.date.today().strftime("%Y/%m/%d"),
+            "user": current_user
         }
     )
 
@@ -114,7 +117,8 @@ def create_transaction(
         destination_account_id: int = Form(None),
         person_id: int = Form(None),
         description: str = Form(None),
-        db: Session = Depends(get_db)
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
 ):
 
     # ۱. اعتبارسنجی مبلغ
@@ -129,7 +133,7 @@ def create_transaction(
     # ۳. اعتبارسنجی حساب مبدأ
     account = (
         db.query(Account)
-        .filter(Account.id == account_id)
+        .filter(Account.id == account_id, Account.user_id == current_user.id)
         .with_for_update()
         .first()
     )
@@ -140,22 +144,27 @@ def create_transaction(
         )
 
 
-
-
     real_date = parse_date_input(trans_date)
-    src_account = db.query(Account).filter(Account.id == account_id).first()
+    src_account = db.query(Account).filter(Account.id == account_id, Account.user_id == current_user.id).first()
     if not src_account:
         return RedirectResponse(url="/transactions", status_code=303)
 
     dest_account = None
     if trans_type == "TRANSFER" and destination_account_id and destination_account_id != account_id:
-        dest_account = db.query(Account).filter(Account.id == destination_account_id).first()
+        dest_account = db.query(Account).filter(Account.id == destination_account_id, Account.user_id == current_user.id).first()
+
+    valid_person_id = None
+    if person_id:
+        p = db.query(Person).filter(Person.id == person_id, Person.user_id == current_user.id).first()
+        if p:
+            valid_person_id = p.id
 
     # اعمال اثر مالی
     apply_transaction_balance(db, trans_type, amount, src_account, dest_account)
 
     # ایجاد رکورد تراکنش با سازگاری ستون‌ها
     tx_kwargs = {
+        "user_id": current_user.id,
         "account_id": account_id,
         "type": trans_type,
         "category": category,
@@ -167,8 +176,8 @@ def create_transaction(
     if hasattr(Transaction, "destination_account_id") and trans_type == "TRANSFER" and dest_account:
         tx_kwargs["destination_account_id"] = dest_account.id
 
-    if hasattr(Transaction, "person_id") and person_id:
-        tx_kwargs["person_id"] = person_id
+    if hasattr(Transaction, "person_id") and valid_person_id:
+        tx_kwargs["person_id"] = valid_person_id
 
     tx = Transaction(**tx_kwargs)
     db.add(tx)
@@ -182,14 +191,17 @@ def update_transaction(
         trans_id: int,
         trans_type: str = Form(...),
         account_id: int = Form(...),
-        amount: int = Form(...),
+        amount: str = Form(...),
         category: str = Form(...),
         trans_date: str = Form(...),
         destination_account_id: int = Form(None),
         person_id: int = Form(None),
         description: str = Form(None),
-        db: Session = Depends(get_db)
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+
 ):
+    amount = parse_int_amount(amount)
     # ۱. اعتبارسنجی مبلغ
     if amount <= 0:
         return RedirectResponse(
@@ -202,7 +214,7 @@ def update_transaction(
     # ۳. اعتبارسنجی حساب مبدأ
     account = (
         db.query(Account)
-        .filter(Account.id == account_id)
+        .filter(Account.id == account_id,Account.user_id == current_user.id)
         .with_for_update()
         .first()
     )
@@ -213,18 +225,24 @@ def update_transaction(
         )
 
 
-    tx = db.query(Transaction).filter(Transaction.id == trans_id).first()
+    tx = db.query(Transaction).filter(Transaction.id == trans_id,Transaction.user_id==current_user.id).first()
     if not tx:
         return RedirectResponse(url="/transactions", status_code=303)
 
+    # ⛔️ گارد امنیتی: جلوگیری از ویرایش تراکنش‌های چک و بدهی
+    if getattr(tx, "cheque_id", None) or getattr(tx, "debt_id", None):
+        return RedirectResponse(
+            url="/transactions?error=system_transaction_locked", status_code=303
+        )
+
     # 1. خنثی کردن اثر تراکنش قبلی
-    revert_transaction_balance(db, tx)
+    revert_transaction_balance(db, tx,current_user.id)
 
     # 2. دریافت حساب‌های جدید
-    src_account = db.query(Account).filter(Account.id == account_id).first()
+    src_account = db.query(Account).filter(Account.id == account_id,Account.user_id==current_user.id).first()
     dest_account = None
     if trans_type == "TRANSFER" and destination_account_id and destination_account_id != account_id:
-        dest_account = db.query(Account).filter(Account.id == destination_account_id).first()
+        dest_account = db.query(Account).filter(Account.id == destination_account_id,Account.user_id==current_user.id).first()
 
     # 3. اعمال اثر مالی جدید
     apply_transaction_balance(db, trans_type, amount, src_account, dest_account)
@@ -248,8 +266,8 @@ def update_transaction(
 
 
 @router.post("/{trans_id}/delete")
-def delete_transaction(trans_id: int, db: Session = Depends(get_db)):
-    tx = db.query(Transaction).filter(Transaction.id == trans_id).first()
+def delete_transaction(trans_id: int, db: Session = Depends(get_db),current_user: User = Depends(get_current_user)):
+    tx = db.query(Transaction).filter(Transaction.id == trans_id, Transaction.user_id == current_user.id).first()
     if not tx:
         return RedirectResponse(url="/transactions", status_code=303)
 
@@ -258,7 +276,7 @@ def delete_transaction(trans_id: int, db: Session = Depends(get_db)):
         # این تراکنش از بخش چک یا تسویه ایجاد شده و باید از همان مبدا مدیریت/ابطال شود
         return RedirectResponse(url="/transactions?error=linked_transaction", status_code=303)
 
-    revert_transaction_balance(db, tx)
+    revert_transaction_balance(db, tx,current_user.id)
     db.delete(tx)
     db.commit()
     return RedirectResponse(url="/transactions", status_code=303)

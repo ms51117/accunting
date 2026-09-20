@@ -123,11 +123,21 @@
                                 </div>
                                 <div class="modal-body">
                                     <div class="mb-3">
-                                        <label class="form-label">نوع *</label>
-                                        <select name="type" class="form-select" required>
-                                            <option value="RECEIVABLE" {% if d.type == 'RECEIVABLE' or d.type.value == 'RECEIVABLE' %}selected{% endif %}>طلب ما (از شخص)</option>
-                                            <option value="PAYABLE" {% if d.type == 'PAYABLE' or d.type.value == 'PAYABLE' %}selected{% endif %}>بدهی ما (به شخص)</option>
-                                        </select>
+                                        <label class="form-label text-muted small">نوع (غیرقابل تغییر)</label>
+
+                                        {% set is_receivable = (d.type == 'RECEIVABLE' or d.type.value == 'RECEIVABLE') %}
+
+                                        <!-- نمایش غیرقابل ویرایش با رنگ مناسب -->
+                                        <div class="p-2 rounded border fw-bold text-center {{ 'bg-success-subtle text-success border-success' if is_receivable else 'bg-danger-subtle text-danger border-danger' }}">
+                                            {% if is_receivable %}
+                                                <i class="bi bi-arrow-down-left-circle me-1"></i> طلب ما (از شخص)
+                                            {% else %}
+                                                <i class="bi bi-arrow-up-right-circle me-1"></i> بدهی ما (به شخص)
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- ارسال مقدار به بک‌اند بدون امکان دستکاری کاربر -->
+                                        <input type="hidden" name="type" value="{{ 'RECEIVABLE' if is_receivable else 'PAYABLE' }}">
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label">طرف حساب *</label>
@@ -142,6 +152,17 @@
                                         <input type="text" name="amount" value="{{ d.amount }}" class="form-control" min="{{ d.paid_amount }}" required>
                                         <small class="text-muted">مبلغ کل نمی‌تواند کمتر از مبالغ تسویه شده ({{ d.paid_amount | rial }}) باشد.</small>
                                     </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">مبلغ پرداخت/تسویه‌شده تا الان (تومان)</label>
+                                        <input type="text"
+                                               name="paid_amount"
+                                               id="edit_debt_paid_amount_{{ d.id }}"
+                                               class="form-control number-format"
+                                               value="{{ '{:,}'.format(d.paid_amount) if d.paid_amount else '0' }}"
+                                               placeholder="در صورت عدم تغییر، خالی بگذارید">
+                                        <div class="form-text text-muted">اگر تغییر نکرده، دست نزنید.</div>
+                                    </div>
+
                                     <div class="mb-3">
                                         <label class="form-label">تاریخ سررسید (اختیاری)</label>
                                         <input type="text" name="due_date" value="{{ d.due_date | jalali if d.due_date else '' }}" class="form-control latin-num" placeholder="مثال: 1405/08/30" data-jdp>
