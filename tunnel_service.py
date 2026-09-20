@@ -15,7 +15,7 @@ logger = logging.getLogger("cloudflare_tunnel")
 
 class CloudflareTunnelService:
     def __init__(self):
-        self.bot_token = settings.telegram_bot_token
+        self.bot_token = settings.TELEGRAM_BOT_TOKEN
         self.proxy = settings.https_proxy or settings.http_proxy
         self.is_enabled = settings.CLOUDFLARE_TUNNEL_ENABLED
         self.port = settings.APP_PORT
