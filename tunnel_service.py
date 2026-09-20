@@ -16,7 +16,6 @@ logger = logging.getLogger("cloudflare_tunnel")
 class CloudflareTunnelService:
     def __init__(self):
         self.bot_token = settings.TELEGRAM_BOT_TOKEN
-        self.proxy = settings.https_proxy or settings.http_proxy
         self.is_enabled = settings.CLOUDFLARE_TUNNEL_ENABLED
         self.port = settings.APP_PORT
         self.last_url = None
@@ -37,7 +36,7 @@ class CloudflareTunnelService:
 
         try:
             # سازگار با نسخه‌های جدید httpx
-            async with httpx.AsyncClient(proxy=self.proxy, timeout=20.0) as client:
+            async with httpx.AsyncClient( timeout=20.0) as client:
                 resp = await client.post(url, json=payload)
                 if resp.status_code == 200:
                     return True
