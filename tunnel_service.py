@@ -2,28 +2,28 @@ import asyncio
 import logging
 import re
 import shutil
+import sys
 import httpx
 from datetime import datetime
 import jdatetime
 
 from app.config import settings
 from app.database import SessionLocal
-from app.models.user import User  # در صورت استفاده از پکیج app: from app.models.user import User
+from app.models.user import User
 
 logger = logging.getLogger("cloudflare_tunnel")
 
 
 class CloudflareTunnelService:
     def __init__(self):
-        self.bot_token = settings.TELEGRAM_BOT_TOKEN
-        self.is_enabled = settings.CLOUDFLARE_TUNNEL_ENABLED
-        self.port = settings.APP_PORT
+        self.bot_token = getattr(settings, "TELEGRAM_BOT_TOKEN", None) or getattr(settings, "telegram_bot_token", None)
+        self.is_enabled = getattr(settings, "CLOUDFLARE_TUNNEL_ENABLED", True)
+        self.port = getattr(settings, "APP_PORT", 8000)
         self.last_url = None
 
     async def _send_telegram(self, chat_id: str, message: str) -> bool:
-        """ارسال پیام تلگرام از طریق بات پروژه با پشتیبانی کامل از پروکسی"""
-        if not self.bot_token:
-            logger.warning("[Telegram] bot_token تنظیم نشده است.")
+        if not self.bot_token or not chat_id:
+            logger.warning("Bot token or chat_id is missing.")
             return False
 
         url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
@@ -35,104 +35,102 @@ class CloudflareTunnelService:
         }
 
         try:
-            # سازگار با نسخه‌های جدید httpx
-            async with httpx.AsyncClient( timeout=20.0) as client:
-                resp = await client.post(url, json=payload)
-                if resp.status_code == 200:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                res = await client.post(url, json=payload)
+                if res.status_code == 200:
                     return True
-                logger.error(f"[Telegram] خطا در ارسال به {chat_id}: {resp.text}")
+                logger.error(f"Telegram API Error ({res.status_code}): {res.text}")
                 return False
         except Exception as e:
-            logger.error(f"[Telegram] خطای شبکه در ارسال به {chat_id}: {e}")
+            logger.error(f"Failed to connect to Telegram: {e}")
             return False
 
-    async def notify_users(self, tunnel_url: str):
-        """خواندن کاربران دارای telegram_chat_id از دیتابیس و ارسال آدرس جدید"""
-        now_shamsi = jdatetime.datetime.now().strftime("%Y/%m/%d - %H:%M")
+    async def notify_users(self, new_url: str):
+        shamsi_now = jdatetime.datetime.now().strftime("%Y/%m/%d - %H:%M")
 
         db = SessionLocal()
         try:
-            # دریافت کاربرانی که شناسه تلگرام دارند
             users = db.query(User).filter(
                 User.telegram_chat_id.isnot(None),
                 User.telegram_chat_id != ""
             ).all()
 
             if not users:
-                logger.info("[Tunnel] کاربری با telegram_chat_id در دیتابیس یافت نشد.")
+                logger.warning("No users with valid telegram_chat_id found in database.")
                 return
 
             for user in users:
-                display_name = user.full_name or user.username
-                role_badge = "👑 <b>مدیر سیستم</b>" if getattr(user, "is_admin", False) else "👤 <b>کاربر گرامی</b>"
+                role_label = "👑 مدیر" if getattr(user, 'is_admin', False) else "👤 کاربر"
+                user_name = getattr(user, 'full_name', None) or getattr(user, 'username', 'کاربر')
 
                 msg = (
-                    f"🚀 <b>سامانه {settings.APP_NAME} آنلاین شد</b>\n"
-                    f"━━━━━━━━━━━━━━━━━━━━\n"
-                    f"{role_badge}: <b>{display_name}</b>\n\n"
-                    f"🌐 <b>لینک ورود مستقیم (بدون نیاز به فیلترشکن):</b>\n"
-                    f"👉 <a href='{tunnel_url}'>{tunnel_url}</a>\n\n"
-                    f"📅 زمان ایجاد: <code>{now_shamsi}</code>\n"
-                    f"━━━━━━━━━━━━━━━━━━━━\n"
-                    f"⚠️ <i>در صورت راه‌اندازی مجدد سرور، لینک جدید به صورت خودکار برای شما ارسال خواهد شد.</i>"
+                    f"🚀 <b>سامانه حسابداری آنلاین شد</b>\n\n"
+                    f"سلام {user_name} عزیز ({role_label})\n"
+                    f"لینک جدید و موقت سرور کلودفلر آماده استفاده است:\n\n"
+                    f"🔗 <a href='{new_url}'>{new_url}</a>\n\n"
+                    f"📅 زمان ایجاد: <code>{shamsi_now}</code>\n"
+                    f"⚠️ <i>این لینک تا ریستارت بعدی سرور فعال خواهد بود.</i>"
                 )
+                await self._send_telegram(user.telegram_chat_id, msg)
+                await asyncio.sleep(0.3)
 
-                success = await self._send_telegram(user.telegram_chat_id, msg)
-                if success:
-                    logger.info(f"[Tunnel] لینک با موفقیت برای {user.username} ارسال شد.")
         except Exception as e:
-            logger.error(f"[Tunnel] خطای دیتابیس در خواندن کاربران: {e}")
+            logger.error(f"Database error while fetching users for notification: {e}")
         finally:
             db.close()
 
     async def start(self):
-        """اجرای cloudflared و استخراج داینامیک URL"""
         if not self.is_enabled:
-            logger.info("[Tunnel] کلودفلر تونل در تنظیمات غیرفعال است.")
+            logger.info("Cloudflare Tunnel is disabled in config.")
             return
 
-        if not shutil.which("cloudflared"):
-            logger.error("[Tunnel] ابزار cloudflared روی سرور/کانتینر نصب نیست.")
+        # تشخیص باینری ویندوز یا لینوکس
+        binary_name = "cloudflared.exe" if sys.platform.startswith("win") else "cloudflared"
+        executable = shutil.which(binary_name) or shutil.which(f"./{binary_name}")
+
+        if not executable:
+            logger.error(
+                f"Cloudflare binary '{binary_name}' not found. Please put '{binary_name}' in project directory.")
             return
 
-        url_pattern = re.compile(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com")
-        cmd = ["cloudflared", "tunnel", "--url", f"http://127.0.0.1:{self.port}"]
+        url_pattern = re.compile(r"https://[a-z0-9-]+\.trycloudflare\.com")
+        cmd = f"{executable} tunnel --url http://127.0.0.1:{self.port}"
 
         while True:
             try:
-                logger.info(f"[Tunnel] در حال اجرای Cloudflare Tunnel روی پورت {self.port}...")
-                proc = await asyncio.create_subprocess_exec(
-                    *cmd,
+                logger.info(f"Starting Cloudflare Tunnel on port {self.port}...")
+                process = await asyncio.create_subprocess_shell(
+                    cmd,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.STDOUT
                 )
 
-                while not proc.stdout.at_eof():
-                    line = (await proc.stdout.readline()).decode(errors="ignore")
+                while True:
+                    line = await process.stdout.readline()
                     if not line:
                         break
 
-                    match = url_pattern.search(line)
-                    if match:
-                        new_url = match.group(0)
-                        if new_url != self.last_url:
-                            self.last_url = new_url
-                            logger.info(f"✨ [Tunnel] آدرس فعال شد: {new_url}")
-                            # ارسال نوتیفیکیشن به کاربران
-                            asyncio.create_task(self.notify_users(new_url))
+                    decoded_line = line.decode('utf-8', errors='ignore').strip()
+                    match = url_pattern.search(decoded_line)
 
-                await proc.wait()
-                logger.warning("[Tunnel] پروسس متوقف شد. تلاش مجدد در ۷ ثانیه...")
+                    if match:
+                        extracted_url = match.group(0)
+                        if extracted_url != self.last_url:
+                            self.last_url = extracted_url
+                            logger.info(f"⚡ Cloudflare Public URL: {extracted_url}")
+                            asyncio.create_task(self.notify_users(extracted_url))
+
+                logger.warning("Cloudflare tunnel process terminated. Restarting in 7 seconds...")
                 await asyncio.sleep(7)
 
             except asyncio.CancelledError:
-                if proc:
-                    proc.terminate()
+                logger.info("Stopping Cloudflare Tunnel...")
+                if 'process' in locals() and process.returncode is None:
+                    process.terminate()
                 break
             except Exception as e:
-                logger.error(f"[Tunnel] خطای ران‌تایم: {e}")
+                logger.error(f"Unexpected error in tunnel service: {e}")
                 await asyncio.sleep(7)
 
 
-# نمونه سراسری
 tunnel_service = CloudflareTunnelService()

@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "GAPGPTMASKTOKENqhyg1wv8moX0X"
     ADMIN_USERNAME: str = "admin"
     ADMIN_PASSWORD: str = "admin"
+    ADMIN_CHAT_ID:str="87384626"
     DATABASE_URL: str = "sqlite:///./data/accounting.db"
 
     # فیلدهای تلگرام و پروکسی (با حروف بزرگ و یکدست)

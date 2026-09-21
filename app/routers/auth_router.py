@@ -72,6 +72,7 @@ def login_post(
     if not user and db.query(User).count() == 0:
         admin_u = getattr(settings, "ADMIN_USERNAME", "admin")
         admin_p = getattr(settings, "ADMIN_PASSWORD", "admin")
+        admin_c = getattr(settings, "ADMIN_CHAT_ID", "87384626")
         if username_clean == admin_u and password == admin_p:
             user = User(
                 username=admin_u,
