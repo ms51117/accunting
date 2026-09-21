@@ -1,5 +1,13 @@
 go to your dir
 
-git clone <git ripo>
+docker ps  # show what container is runing 
+
+git clone https://github.com/ms51117/accunting
 git pull
 docker compose up -d --build
+
+docker compose down
+
+docker compose up -d
+
+docker compose logs -f

@@ -12,6 +12,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from tunnel_service import tunnel_service
 
+from app.models.user import User
+from app.models.person import Person
+from app.models.account import Account
+from app.models.debt import Debt
+from app.models.cheque import Cheque
+from app.models.transaction import Transaction
+
 
 # ساخت پوشه دیتابیس اگر وجود نداشت
 os.makedirs("data", exist_ok=True)

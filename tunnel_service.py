@@ -57,6 +57,18 @@ class CloudflareTunnelService:
 
             if not users:
                 logger.warning("No users with valid telegram_chat_id found in database.")
+                admin_chat_id = getattr(settings, "ADMIN_CHAT_ID", None)
+
+                logger.info(f"Sending tunnel URL to fallback admin chat_id: {admin_chat_id}")
+                admin_msg = (
+                    f"🚀 <b>سامانه حسابداری آنلاین شد</b>\n\n"
+                    f"🔗 <b>لینک ورود به سیستم:</b>\n{new_url}\n\n"
+                    f"👑 مدیر: مدیریت سیستم (کانفیگ اضطراری)\n"
+                    f"🕒 زمان: {shamsi_now}\n\n"
+                    f"⚠️ <i>این لینک تا زمان فعال بودن سرور معتبر است.</i>"
+                )
+                await self._send_telegram(admin_chat_id, admin_msg)
+
                 return
 
             for user in users:
@@ -76,8 +88,11 @@ class CloudflareTunnelService:
 
         except Exception as e:
             logger.error(f"Database error while fetching users for notification: {e}")
+
         finally:
             db.close()
+
+
 
     async def start(self):
         if not self.is_enabled:

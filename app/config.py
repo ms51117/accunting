@@ -7,7 +7,7 @@ load_dotenv()
 
 class Settings(BaseSettings):
     APP_NAME: str = "سامانه حسابداری شخصی"
-    SECRET_KEY: str = "GAPGPTMASKTOKENqhyg1wv8moX0X"
+    SECRET_KEY: str = "test-public-reza-login"
     ADMIN_USERNAME: str = "admin"
     ADMIN_PASSWORD: str = "admin"
     ADMIN_CHAT_ID:str="87384626"
