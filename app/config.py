@@ -31,4 +31,3 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-print(getattr(settings, "ADMIN_USERNAME"))

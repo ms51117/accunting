@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="e670e383-e0bc-4f55-a9ac-11732bf2e44e" name="parspack">
+        <fileTransfer rootFolder="/root/accunting" accessType="SFTP" host="45.195.250.41" port="22" sshConfigId="c1862704-cb99-4d84-b939-4df455f6a3d6" sshConfig="root@45.195.250.41:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

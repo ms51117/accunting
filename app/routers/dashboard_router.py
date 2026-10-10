@@ -10,6 +10,10 @@ from app.models.cheque import Cheque
 from app.models.debt import Debt
 from app.models.transaction import Transaction
 from app.models.user import User
+from sqlalchemy.orm import joinedload
+from app.models.debt import Debt, DebtStatus, DebtType
+from app.models.person import Person
+
 
 router = APIRouter(tags=["Dashboard"], dependencies=[Depends(get_current_user)])
 templates = Jinja2Templates(directory="app/templates")
@@ -71,6 +75,45 @@ def dashboard_view(request: Request, db: Session = Depends(get_db),current_user:
     upcoming_cheques = db.query(Cheque).filter(Cheque.status == "PENDING",Cheque.user_id == current_user.id).order_by(Cheque.due_date.asc()).limit(
         10).all()
 
+
+    # استخراج بدهی‌ها و طلب‌های فعال کاربر جاری به تفکیک اشخاص
+    active_debts = (
+        db.query(Debt)
+        .options(joinedload(Debt.person))
+        .filter(Debt.user_id == current_user.id, Debt.status == DebtStatus.ACTIVE)
+        .all()
+    )
+
+    person_balances = {}
+    for debt in active_debts:
+        pid = debt.person_id
+        if pid not in person_balances:
+            person_balances[pid] = {
+                "person": debt.person,
+                "receivable": 0,  # طلب ما از طرف
+                "payable": 0,     # بدهی ما به طرف
+            }
+        remaining = debt.amount - debt.paid_amount
+        if debt.type == DebtType.RECEIVABLE:
+            person_balances[pid]["receivable"] += remaining
+        elif debt.type == DebtType.PAYABLE:
+            person_balances[pid]["payable"] += remaining
+
+    # محاسبه وضعیت خالص برای هر شخص (فقط اشخاصی که مانده صفر ندارند)
+    debt_summary_list = []
+    for data in person_balances.values():
+        net = data["receivable"] - data["payable"]
+        if net != 0:
+            debt_summary_list.append({
+                "person": data["person"],
+                "receivable": data["receivable"],
+                "payable": data["payable"],
+                "net": net,  # اگر مثبت: ما طلبکاریم | اگر منفی: ما بدهکاریم
+            })
+
+    # مرتب‌سازی بر اساس بیشترین مانده
+    debt_summary_list.sort(key=lambda x: abs(x["net"]), reverse=True)
+
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
@@ -81,6 +124,6 @@ def dashboard_view(request: Request, db: Session = Depends(get_db),current_user:
         "total_receivable_debt": total_receivable_debt,
         "total_payable_debt": total_payable_debt,
         "recent_transactions": recent_transactions,
-        "upcoming_cheques": upcoming_cheques
-
+        "upcoming_cheques": upcoming_cheques,
+        "debt_summary_list": debt_summary_list,  # <-- اضافه شد
     })
