@@ -52,7 +52,7 @@ def list_cheques(request: Request, type_filter: str = None, status_filter: str =
 
     if type_filter:
         query = query.filter(Cheque.type == type_filter)
-    if status_filter:
+    if status_filter and status_filter != "ALL":
         query = query.filter(Cheque.status == status_filter)
 
     cheques = query.order_by(Cheque.due_date.asc()).all()
@@ -67,12 +67,10 @@ def list_cheques(request: Request, type_filter: str = None, status_filter: str =
             "accounts": accounts,
             "persons": persons,
             "type_filter": type_filter or "",
-            "status_filter": status_filter or "",
+            "status_filter": status_filter or "PENDING",
             "user": current_user
-
     }
     )
-
 
 @router.post("/create")
 def create_cheque(

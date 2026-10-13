@@ -109,7 +109,6 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@majidh1/jalalidatepicker@0.9.6/dist/jalalidatepicker.min.js"></script>
 
     <script>
@@ -187,6 +186,22 @@
         applyCurrencyMask();
     });
     </script>
+    <script>
+      document.addEventListener('click', function (event) {
+        const navMenu = document.getElementById('navMenu');
+        const toggler = document.querySelector('.navbar-toggler');
+
+        // اگر منو در حالت باز باشد
+        if (navMenu && navMenu.classList.contains('show')) {
+          // اگر کلیک خارج از خود منو و خارج از دکمه همبرگری بود
+          if (!navMenu.contains(event.target) && !toggler.contains(event.target)) {
+            const bsCollapse = bootstrap.Collapse.getInstance(navMenu) || new bootstrap.Collapse(navMenu);
+            bsCollapse.hide();
+          }
+        }
+      });
+    </script>
+
 
 </body>
 </html>

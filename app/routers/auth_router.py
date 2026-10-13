@@ -95,7 +95,7 @@ def login_post(
         key=COOKIE_NAME,
         value=token,
         httponly=True,
-        max_age=86400 * 30,
+        max_age=3600,
         samesite="lax"
     )
     return response

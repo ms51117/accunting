@@ -7,12 +7,29 @@
         <h4 class="mb-1"><i class="bi bi-wallet2 me-2"></i>دفتر طلب و بدهی اشخاص</h4>
         <span class="text-muted">مدیریت حساب مطالبات و بدهی‌ها</span>
     </div>
+
     <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newDebtModal">
         <i class="bi bi-plus-circle me-1"></i> ثبت طلب / بدهی جدید
     </button>
 </div>
 
 <div class="card shadow-sm border-0">
+    <div class="card-header bg-white border-bottom py-2 px-3">
+        <div class="nav nav-pills nav-fill bg-light p-1 rounded-3" style="max-width: 420px; margin: 0 auto 0 0;">
+            <a href="/debts/?status=ACTIVE{% if selected_type %}&type={{ selected_type }}{% endif %}"
+               class="nav-link py-1 px-3 fs-7 text-center {% if selected_status == 'ACTIVE' or not selected_status %}active fw-bold shadow-sm{% else %}text-secondary{% endif %}">
+                جاری
+            </a>
+            <a href="/debts/?status=SETTLED{% if selected_type %}&type={{ selected_type }}{% endif %}"
+               class="nav-link py-1 px-3 fs-7 text-center {% if selected_status == 'SETTLED' %}active fw-bold shadow-sm{% else %}text-secondary{% endif %}">
+                تسویه شده
+            </a>
+            <a href="/debts/?status=ALL{% if selected_type %}&type={{ selected_type }}{% endif %}"
+               class="nav-link py-1 px-3 fs-7 text-center {% if selected_status == 'ALL' %}active fw-bold shadow-sm{% else %}text-secondary{% endif %}">
+                همه
+            </a>
+        </div>
+    </div>
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">

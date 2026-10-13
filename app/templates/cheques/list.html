@@ -13,6 +13,26 @@
     </div>
 
     <div class="card shadow-sm border-0">
+        <div class="card-header bg-white border-bottom py-2 px-3">
+            <div class="nav nav-pills nav-fill bg-light p-1 rounded-3" style="max-width: 520px; margin: 0 auto 0 0;">
+                <a href="/cheques?status_filter=PENDING{% if type_filter %}&type_filter={{ type_filter }}{% endif %}"
+                   class="nav-link py-1 px-2 fs-7 text-center {% if status_filter == 'PENDING' %}active fw-bold shadow-sm bg-warning {% else %}text-secondary{% endif %}">
+                    در انتظار وصول
+                </a>
+                <a href="/cheques?status_filter=BOUNCED{% if type_filter %}&type_filter={{ type_filter }}{% endif %}"
+                   class="nav-link py-1 px-2 fs-7 text-center {% if status_filter == 'BOUNCED' %}active fw-bold shadow-sm bg-danger text-white{% else %}text-secondary{% endif %}">
+                    برگشت خورده
+                </a>
+                <a href="/cheques?status_filter=CLEARED{% if type_filter %}&type_filter={{ type_filter }}{% endif %}"
+                   class="nav-link py-1 px-2 fs-7 text-center {% if status_filter == 'CLEARED' %}active fw-bold shadow-sm bg-success text-white{% else %}text-secondary{% endif %}">
+                    پاس شده
+                </a>
+                <a href="/cheques?status_filter=ALL{% if type_filter %}&type_filter={{ type_filter }}{% endif %}"
+                   class="nav-link py-1 px-2 fs-7 text-center {% if status_filter == 'ALL' %}active fw-bold shadow-sm{% else %}text-secondary{% endif %}">
+                    همه
+                </a>
+            </div>
+        </div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0 text-center">

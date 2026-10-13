@@ -85,9 +85,8 @@
                         <thead class="table-light">
                             <tr>
                                 <th>نام شخص</th>
-                                <th>شماره تماس</th>
-                                <th>طلب ما (تومان/ریال)</th>
-                                <th>بدهی ما (تومان/ریال)</th>
+                                <th>طلب ما (ریال)</th>
+                                <th>بدهی ما (ریال)</th>
                                 <th>وضعیت نهایی</th>
                             </tr>
                         </thead>
@@ -95,7 +94,6 @@
                             {% for item in debt_summary_list %}
                             <tr>
                                 <td class="fw-semibold">{{ item.person.full_name }}</td>
-                                <td>{{ item.person.phone or '—' }}</td>
                                 <td class="text-success">{{ item.receivable | rial }}</td>
                                 <td class="text-danger">{{ item.payable | rial }}</td>
                                 <td>

@@ -68,13 +68,12 @@ def debts_list(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user),
         type: str = None,
-        status: str = None
+        status: str = "ACTIVE"
 ):
     query = db.query(Debt).filter(Debt.user_id == current_user.id)
-
     if type:
         query = query.filter(Debt.type == type)
-    if status:
+    if status and status != "ALL":
         query = query.filter(Debt.status == status)
 
     debts = query.order_by(Debt.id.desc()).all()
