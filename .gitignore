@@ -3,6 +3,12 @@
 *.sqlite3
 __pycache__/
 .venv/
+env/
+venv/
 backups/
 data/
 cloudflared.exe
+tunnel_url.txt
+.idea/
+.vscode/
+*.log

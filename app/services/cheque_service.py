@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.models.cheque import Cheque, ChequeStatus, ChequeType
 from app.models.account import Account
 from app.models.transaction import Transaction
+from app.services.category_service import get_or_create_category
 
 
 def get_status_val(status_obj):
@@ -64,8 +65,11 @@ def clear_cheque(db: Session, cheque_id: int, user_id: int, target_account_id: i
     # ۴. به‌روزرسانی وضعیت چک
     cheque.status = ChequeStatus.CLEARED if hasattr(ChequeStatus, "CLEARED") else "CLEARED"
     cheque.account_id = account.id
+    cheque.cleared_date = date.today()
 
     # ۵. ثبت تراکنش متصل به چک
+    cheque_cat = get_or_create_category(db, user_id=user_id, title="وصول چک", trans_type="BOTH")
+
     tx = Transaction(
         user_id=user_id,
         account_id=account.id,
@@ -73,6 +77,7 @@ def clear_cheque(db: Session, cheque_id: int, user_id: int, target_account_id: i
         amount=cheque.amount,
         trans_date=date.today(),
         category="وصول چک",
+        category_id=cheque_cat.id,
         description=tx_desc,
         person_id=cheque.person_id,
         cheque_id=cheque.id

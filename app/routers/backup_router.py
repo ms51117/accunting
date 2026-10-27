@@ -15,20 +15,25 @@ from app.auth import get_current_user
 from app.models.user import User
 from app.models.account import Account
 from app.models.person import Person
+from app.models.category import Category
 from app.models.transaction import Transaction
 from app.models.debt import Debt
 from app.models.cheque import Cheque
+from app.utils.jalali import format_rial, to_jalali_str
 
 router = APIRouter(prefix="/backups", tags=["Backup"])
 templates = Jinja2Templates(directory="app/templates")
 
+templates.env.filters["rial"] = format_rial
+templates.env.filters["jalali"] = to_jalali_str
 
-TELEGRAM_BOT_TOKEN = getattr(settings, "TELEGRAM_BOT_TOKEN", "")
 
-PROXIES = {
-    "http://": os.getenv("HTTP_PROXY", None),
-    "https://": os.getenv("HTTPS_PROXY", None),
-}
+def get_httpx_client(**kwargs) -> httpx.AsyncClient:
+    """ساخت نمونه AsyncClient با پشتیبانی از پروکسی برای اتصال به تلگرام"""
+    proxy = getattr(settings, "HTTPS_PROXY", None) or getattr(settings, "HTTP_PROXY", None) or os.getenv("HTTPS_PROXY") or os.getenv("HTTP_PROXY")
+    if proxy:
+        return httpx.AsyncClient(proxy=proxy, **kwargs)
+    return httpx.AsyncClient(**kwargs)
 
 
 # --- توابع کمکی برای تبدیل امن تاریخ‌ها ---
@@ -43,29 +48,42 @@ def parse_date(date_val):
         return None
 
 
-# --- تابع استخراج داده‌های کاربر دقیقا بر اساس مدل‌ها ---
+# --- تابع استخراج داده‌های کاربر با حفظ پیوندهای رابطه‌ای ---
 def export_user_data(user: User, db: Session) -> dict:
     user_id = user.id
 
     persons = db.query(Person).filter(Person.user_id == user_id).all()
     accounts = db.query(Account).filter(Account.user_id == user_id).all()
+    categories = db.query(Category).filter(Category.user_id == user_id).all()
     debts = db.query(Debt).filter(Debt.user_id == user_id).all()
     cheques = db.query(Cheque).filter(Cheque.user_id == user_id).all()
     transactions = db.query(Transaction).filter(Transaction.user_id == user_id).all()
 
-    # نگاشت شناسه به نام برای حفظ یکپارچگی روابط در بک‌آپ
     person_map = {p.id: p.full_name for p in persons}
     account_map = {a.id: a.title for a in accounts}
+    category_map = {c.id: c.title for c in categories}
 
     return {
-        "version": "2.0",
+        "version": "2.2",
         "exported_at": datetime.now().isoformat(),
         "user": {
             "username": user.username,
             "full_name": user.full_name
         },
+        "categories": [
+            {
+                "id": c.id,
+                "title": c.title,
+                "type": c.type,
+                "color": c.color,
+                "icon": c.icon,
+                "description": c.description
+            }
+            for c in categories
+        ],
         "persons": [
             {
+                "id": p.id,
                 "full_name": p.full_name,
                 "phone": p.phone,
                 "sheba": p.sheba,
@@ -77,6 +95,7 @@ def export_user_data(user: User, db: Session) -> dict:
         ],
         "accounts": [
             {
+                "id": a.id,
                 "title": a.title,
                 "bank_name": a.bank_name,
                 "account_number": a.account_number,
@@ -87,6 +106,7 @@ def export_user_data(user: User, db: Session) -> dict:
         ],
         "debts": [
             {
+                "ref_id": d.id,
                 "type": d.type,
                 "amount": int(d.amount),
                 "paid_amount": int(d.paid_amount or 0),
@@ -99,6 +119,7 @@ def export_user_data(user: User, db: Session) -> dict:
         ],
         "cheques": [
             {
+                "ref_id": c.id,
                 "type": c.type,
                 "cheque_number": c.cheque_number,
                 "sayad_number": c.sayad_number,
@@ -118,12 +139,16 @@ def export_user_data(user: User, db: Session) -> dict:
             {
                 "type": t.type,
                 "category": t.category,
+                "category_title": category_map.get(t.category_id, t.category),
+                "category_id": t.category_id,
                 "amount": int(t.amount),
                 "trans_date": t.trans_date.isoformat() if t.trans_date else None,
                 "description": t.description,
                 "account_title": account_map.get(t.account_id),
                 "destination_account_title": account_map.get(t.destination_account_id),
-                "person_name": person_map.get(t.person_id)
+                "person_name": person_map.get(t.person_id),
+                "debt_ref_id": t.debt_id,
+                "cheque_ref_id": t.cheque_id
             }
             for t in transactions
         ]
@@ -134,8 +159,8 @@ def export_user_data(user: User, db: Session) -> dict:
 @router.get("", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
 def backup_page(
-        request: Request,
-        current_user: User = Depends(get_current_user)
+    request: Request,
+    current_user: User = Depends(get_current_user)
 ):
     return templates.TemplateResponse(
         request=request,
@@ -151,8 +176,8 @@ def backup_page(
 # ۲. دانلود مستقیم فایل بک‌آپ
 @router.get("/download")
 def download_backup(
-        current_user: User = Depends(get_current_user),
-        db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     data = export_user_data(current_user, db)
     json_str = json.dumps(data, ensure_ascii=False, indent=2)
@@ -166,14 +191,15 @@ def download_backup(
     )
 
 
-# ۳. ارسال بک‌آپ از طریق تلگرام
+# ۳. ارسال بک‌آپ از طریق تلگرام با پروکسی
 @router.post("/send-telegram")
 async def send_backup_telegram(
-        current_user: User = Depends(get_current_user),
-        db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    if not TELEGRAM_BOT_TOKEN:
-        raise HTTPException(status_code=500, detail="توکن بات تلگرام در سیستم تعریف نشده است.")
+    bot_token = getattr(settings, "TELEGRAM_BOT_TOKEN", None)
+    if not bot_token:
+        raise HTTPException(status_code=500, detail="توکن بات تلگرام در تنظیمات سیستم تعریف نشده است.")
 
     chat_id = current_user.telegram_chat_id
     if not chat_id:
@@ -183,28 +209,31 @@ async def send_backup_telegram(
     json_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8')
     filename = f"backup_{current_user.username}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendDocument"
+    url = f"https://api.telegram.org/bot{bot_token}/sendDocument"
 
-    async with httpx.AsyncClient( timeout=30.0) as client:
-        files = {"document": (filename, json_bytes, "application/json")}
-        form_data = {
-            "chat_id": chat_id,
-            "caption": f"📦 فایل پشتیبان اطلاعات: {current_user.full_name or current_user.username}\n📅 تاریخ: {datetime.now().strftime('%Y/%m/%d %H:%M')}"
-        }
-        resp = await client.post(url, data=form_data, files=files)
+    try:
+        async with get_httpx_client(timeout=35.0) as client:
+            files = {"document": (filename, json_bytes, "application/json")}
+            form_data = {
+                "chat_id": chat_id,
+                "caption": f"📦 فایل پشتیبان اطلاعات مالی: {current_user.full_name or current_user.username}\n📅 تاریخ: {datetime.now().strftime('%Y/%m/%d %H:%M')}"
+            }
+            resp = await client.post(url, data=form_data, files=files)
 
-        if resp.status_code != 200:
-            raise HTTPException(status_code=502, detail=f"خطا در ارسال به تلگرام ( به ربات accounting20_bot پیام بدین : {resp.text}")
+            if resp.status_code != 200:
+                raise HTTPException(status_code=502, detail=f"خطا در ارسال به تلگرام: {resp.text}")
 
-    return {"status": "success", "message": "فایل پشتیبان با موفقیت به تلگرام شما ارسال شد."}
+        return {"status": "success", "message": "فایل پشتیبان با موفقیت به تلگرام شما ارسال شد."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"خطا در ارتباط با سرور تلگرام: {str(e)}")
 
 
-# ۴. بازیابی (Restore) امن بک‌آپ
+# ۴. بازیابی (Restore) امن و کامل اطلاعات
 @router.post("/restore")
 async def restore_backup(
-        file: UploadFile = File(...),
-        current_user: User = Depends(get_current_user),
-        db: Session = Depends(get_db)
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     if not file.filename.endswith(".json"):
         raise HTTPException(status_code=400, detail="فرمت فایل نامعتبر است. فقط فایل‌های JSON پذیرفته می‌شوند.")
@@ -224,15 +253,35 @@ async def restore_backup(
     user_id = current_user.id
 
     try:
-        # حذف داده‌های قبلی کاربر برای جلوگیری از تکرار داده‌ها
+        # حذف داده‌های قبلی کاربر برای بازنشانی تمیز
         db.query(Transaction).filter(Transaction.user_id == user_id).delete()
         db.query(Cheque).filter(Cheque.user_id == user_id).delete()
         db.query(Debt).filter(Debt.user_id == user_id).delete()
         db.query(Account).filter(Account.user_id == user_id).delete()
         db.query(Person).filter(Person.user_id == user_id).delete()
+        db.query(Category).filter(Category.user_id == user_id).delete()
         db.flush()
 
-        # ۱. بازیابی اشخاص (Persons)
+        # ۰. بازیابی دسته‌بندی‌ها
+        category_map = {}
+        for c in data.get("categories", []):
+            cat_title = (c.get("title") or "").strip()
+            if cat_title:
+                new_cat = Category(
+                    user_id=user_id,
+                    title=cat_title,
+                    type=c.get("type") or "BOTH",
+                    color=c.get("color") or "#3b82f6",
+                    icon=c.get("icon") or "tag",
+                    description=c.get("description")
+                )
+                db.add(new_cat)
+                db.flush()
+                category_map[cat_title] = new_cat.id
+                if "id" in c:
+                    category_map[str(c["id"])] = new_cat.id
+
+        # ۱. بازیابی اشخاص
         person_map = {}
         for p in data.get("persons", []):
             name = p.get("full_name") or p.get("name") or "نامشخص"
@@ -248,8 +297,10 @@ async def restore_backup(
             db.add(new_person)
             db.flush()
             person_map[name] = new_person.id
+            if "id" in p:
+                person_map[str(p["id"])] = new_person.id
 
-        # ۲. بازیابی حساب‌ها (Accounts)
+        # ۲. بازیابی حساب‌ها
         account_map = {}
         for a in data.get("accounts", []):
             title = a.get("title") or "حساب اصلی"
@@ -264,13 +315,15 @@ async def restore_backup(
             db.add(new_acc)
             db.flush()
             account_map[title] = new_acc.id
+            if "id" in a:
+                account_map[str(a["id"])] = new_acc.id
 
-        # ۳. بازیابی بدهی‌ها و طلب‌ها (Debts)
+        # ۳. بازیابی بدهی‌ها و مطالبات
+        debt_ref_map = {}
         for d in data.get("debts", []):
             p_name = d.get("person_name")
             p_id = person_map.get(p_name)
 
-            # اگر شخص در سیستم وجود نداشت، ایجاد خودکار شخص
             if not p_id and p_name:
                 auto_person = Person(user_id=user_id, full_name=p_name)
                 db.add(auto_person)
@@ -290,8 +343,12 @@ async def restore_backup(
                     description=d.get("description")
                 )
                 db.add(new_debt)
+                db.flush()
+                if "ref_id" in d:
+                    debt_ref_map[d["ref_id"]] = new_debt.id
 
-        # ۴. بازیابی چک‌ها (Cheques)
+        # ۴. بازیابی چک‌ها
+        cheque_ref_map = {}
         for c in data.get("cheques", []):
             p_name = c.get("person_name")
             p_id = person_map.get(p_name)
@@ -323,34 +380,59 @@ async def restore_backup(
                     description=c.get("description")
                 )
                 db.add(new_cheque)
+                db.flush()
+                if "ref_id" in c:
+                    cheque_ref_map[c["ref_id"]] = new_cheque.id
 
-        # ۵. بازیابی تراکنش‌ها (Transactions)
+        # ۵. بازیابی تراکنش‌ها با اتصال به چک‌ها و بدهی‌ها
         for t in data.get("transactions", []):
             acc_id = account_map.get(t.get("account_title"))
             dest_acc_id = account_map.get(t.get("destination_account_title"))
             p_id = person_map.get(t.get("person_name"))
 
-            # اگر حسابی پیدا نشد اولین حساب کاربر انتخاب می‌شود
             if not acc_id and account_map:
                 acc_id = next(iter(account_map.values()))
 
             if acc_id:
                 trans_d = parse_date(t.get("trans_date") or t.get("date")) or date.today()
+                cat_title = (t.get("category_title") or t.get("category") or "سایر").strip()
+                if not cat_title:
+                    cat_title = "سایر"
+
+                # ساخت خودکار دسته‌بندی در صورتی که در فایل موجود نباشد (بک‌آپ قدیمی)
+                if cat_title not in category_map:
+                    auto_cat = Category(
+                        user_id=user_id,
+                        title=cat_title,
+                        type=t.get("type") or "BOTH",
+                        color="#3b82f6",
+                        icon="tag",
+                        description="بازیابی خودکار از فایل پشتیبان"
+                    )
+                    db.add(auto_cat)
+                    db.flush()
+                    category_map[cat_title] = auto_cat.id
+
+                assigned_cat_id = category_map.get(cat_title) or (category_map.get(str(t.get("category_id"))) if t.get("category_id") else None)
+
                 new_trx = Transaction(
                     user_id=user_id,
                     account_id=acc_id,
                     destination_account_id=dest_acc_id,
                     person_id=p_id,
                     type=t.get("type") or t.get("transaction_type") or "EXPENSE",
-                    category=t.get("category") or "سایر",
+                    category=cat_title,
+                    category_id=assigned_cat_id,
                     amount=int(t.get("amount", 0)),
                     trans_date=trans_d,
-                    description=t.get("description")
+                    description=t.get("description"),
+                    debt_id=debt_ref_map.get(t.get("debt_ref_id")),
+                    cheque_id=cheque_ref_map.get(t.get("cheque_ref_id"))
                 )
                 db.add(new_trx)
 
         db.commit()
-        return {"status": "success", "message": "اطلاعات با موفقیت و به‌صورت کامل بازیابی شدند."}
+        return {"status": "success", "message": "اطلاعات با موفقیت و حفظ روابط مالی به‌طور کامل بازگردانی شد."}
 
     except Exception as e:
         db.rollback()

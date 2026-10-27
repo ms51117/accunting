@@ -1,13 +1,23 @@
-go to your dir
+# مراحل اجرای سریع سامانه روی سرور لینوکس با داکر:
 
-docker ps  # show what container is runing 
-
-git clone https://github.com/ms51117/accunting
+# ۱. کلون کردن پروژه یا دریافت آخرین تغییرات:
+git clone https://github.com/ms51117/accunting.git
+cd accunting
 git pull
+
+# ۲. ایجاد فایل تنظیمات متغیرهای محیطی:
+cp -n .env.example .env
+
+# ۳. بیلد و اجرای خودکار کانتینر در پس‌زمینه:
 docker compose up -d --build
 
-docker compose down
-
-docker compose up -d
-
+# ۴. مشاهده وضعیت اجرای کانتینر و لاگ‌های زنده:
+docker compose ps
 docker compose logs -f
+
+# دستورات کنترلی در صورت نیاز:
+# توقف کانتینر:
+# docker compose down
+
+# اجرای مجدد:
+# docker compose up -d

@@ -3,18 +3,40 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="mb-0 text-gray-800">
-            <i class="bi bi-card-checklist me-2"></i>مدیریت چک‌ها و صیادی
-        </h4>
-        <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#newChequeModal">
-            <i class="bi bi-plus-lg me-1"></i>ثبت چک جدید
-        </button>
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <h4 class="mb-0 text-white fw-bold">
+                    <i class="bi bi-card-checklist me-2 text-primary"></i>مدیریت چک‌ها و اسناد صیادی
+                </h4>
+                {% if user.telegram_chat_id %}
+                    <span class="badge bg-info-subtle text-info border border-info d-none d-md-inline-flex align-items-center gap-1" title="شناسه تلگرام فعال است">
+                        <i class="bi bi-telegram"></i> یادآور تلگرام فعال ({{ user.telegram_chat_id }})
+                    </span>
+                {% else %}
+                    <a href="/profile" class="badge bg-warning-subtle text-warning border border-warning text-decoration-none d-none d-md-inline-flex align-items-center gap-1" title="جهت دریافت هشدار، شناسه تلگرام را در پروفایل ثبت کنید">
+                        <i class="bi bi-exclamation-triangle"></i> تنظیم شناسه تلگرام
+                    </a>
+                {% endif %}
+            </div>
+            <small class="text-secondary">پیگیری اسناد دریافتی، پرداختی و یادآوری خودکار سررسیدها در تلگرام</small>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button type="button" id="btnSendTelegram" class="btn btn-outline-info shadow-sm d-flex align-items-center gap-2" onclick="sendTelegramReminders()">
+                <i class="bi bi-telegram"></i>
+                <span>ارسال یادآور به تلگرام</span>
+            </button>
+            <button type="button" class="btn btn-primary shadow-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#newChequeModal">
+                <i class="bi bi-plus-lg"></i>
+                <span>ثبت چک جدید</span>
+            </button>
+        </div>
     </div>
 
     <div class="card shadow-sm border-0">
-        <div class="card-header bg-white border-bottom py-2 px-3">
-            <div class="nav nav-pills nav-fill bg-light p-1 rounded-3" style="max-width: 520px; margin: 0 auto 0 0;">
+        <div class="card-header border-bottom py-2 px-3 d-flex justify-content-center">
+            <div class="nav nav-pills nav-fill bg-light p-1 rounded-3 w-100 mx-auto" style="max-width: 520px;">
                 <a href="/cheques?status_filter=PENDING{% if type_filter %}&type_filter={{ type_filter }}{% endif %}"
                    class="nav-link py-1 px-2 fs-7 text-center {% if status_filter == 'PENDING' %}active fw-bold shadow-sm bg-warning {% else %}text-secondary{% endif %}">
                     در انتظار وصول
@@ -34,7 +56,7 @@
             </div>
         </div>
         <div class="card-body p-0">
-            <div class="table-responsive">
+            <div class="table-responsive d-none d-md-block">
                 <table class="table table-hover align-middle mb-0 text-center">
                     <thead class="table-light">
                         <tr>
@@ -59,7 +81,26 @@
                             </td>
                             <td class="fw-bold">{{ ch.person.full_name if ch.person else '-' }}</td>
                             <td class="fw-bold text-primary">{{ ch.amount | rial }}</td>
-                            <td>{{ ch.due_date | jalali }}</td>
+                            <td>
+                                <div class="d-flex flex-column align-items-center">
+                                    <span class="latin-num fw-medium">{{ ch.due_date | jalali }}</span>
+                                    {% if ch.status == 'PENDING' %}
+                                        {% if ch.due_date < today %}
+                                            <span class="badge bg-danger bg-opacity-25 text-danger border border-danger mt-1" style="font-size: 0.68rem;">
+                                                <i class="bi bi-exclamation-octagon me-1"></i>معوقه (گذشته)
+                                            </span>
+                                        {% elif ch.due_date == today %}
+                                            <span class="badge bg-warning text-dark fw-bold mt-1 shadow-sm" style="font-size: 0.7rem;">
+                                                <i class="bi bi-bell-fill me-1"></i>سررسید امروز!
+                                            </span>
+                                        {% elif (ch.due_date - today).days <= 3 %}
+                                            <span class="badge bg-info bg-opacity-25 text-info border border-info mt-1" style="font-size: 0.68rem;">
+                                                {{ (ch.due_date - today).days }} روز مانده
+                                            </span>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </td>
                             <td>
                                 <div>{{ ch.bank_name or '-' }}</div>
                                 {% if ch.sayad_number %}
@@ -254,6 +295,92 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- نمایش کارت‌های اختصاصی موبایل برای چک‌ها -->
+            <div class="d-md-none p-2">
+                {% for ch in cheques %}
+                <div class="card p-3 mb-2 border shadow-none bg-light bg-opacity-50">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            {% if ch.type == 'RECEIVABLE' %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success mb-1">
+                                    <i class="bi bi-arrow-down-left me-1"></i>دریافتی
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger mb-1">
+                                    <i class="bi bi-arrow-up-right me-1"></i>پرداختی
+                                </span>
+                            {% endif %}
+                            <h6 class="fw-bold mb-0 text-dark">{{ ch.person.full_name if ch.person else 'نامشخص' }}</h6>
+                        </div>
+                        <div class="text-end">
+                            <span class="fw-bold latin-num fs-6 text-primary">
+                                {{ ch.amount | rial }} <small class="fs-7">ریال</small>
+                            </span>
+                            <div>
+                                {% if ch.status == 'PENDING' %}
+                                    <span class="badge bg-warning text-dark py-1">در انتظار وصول</span>
+                                {% elif ch.status == 'CLEARED' %}
+                                    <span class="badge bg-success py-1">پاس شده</span>
+                                {% elif ch.status == 'BOUNCED' %}
+                                    <span class="badge bg-danger py-1">برگشت خورده</span>
+                                {% else %}
+                                    <span class="badge bg-secondary py-1">{{ ch.status }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 small text-secondary my-1 py-1 border-top border-bottom border-secondary border-opacity-25">
+                        <div class="col-6">
+                            <span>سررسید:</span> <strong class="text-light">{{ ch.due_date | jalali }}</strong>
+                            {% if ch.status == 'PENDING' %}
+                                {% if ch.due_date < today %}
+                                    <span class="badge bg-danger bg-opacity-25 text-danger border border-danger ms-1" style="font-size: 0.65rem;">معوقه</span>
+                                {% elif ch.due_date == today %}
+                                    <span class="badge bg-warning text-dark fw-bold ms-1" style="font-size: 0.65rem;">امروز!</span>
+                                {% elif (ch.due_date - today).days <= 3 %}
+                                    <span class="badge bg-info bg-opacity-25 text-info border border-info ms-1" style="font-size: 0.65rem;">{{ (ch.due_date - today).days }} روز</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <div class="col-6 text-end">
+                            <span>بانک:</span> <span class="text-light">{{ ch.bank_name or '-' }}</span>
+                        </div>
+                        {% if ch.sayad_number or ch.sayad_id %}
+                        <div class="col-12 font-monospace text-truncate">
+                            <span>صیاد:</span> {{ ch.sayad_number or ch.sayad_id }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- دکمه‌های عملیات در موبایل -->
+                    <div class="d-flex justify-content-end gap-1 pt-2">
+                        {% if ch.status == 'PENDING' %}
+                            <button type="button" class="btn btn-sm btn-success py-1 px-3" data-bs-toggle="modal" data-bs-target="#clearModal{{ ch.id }}">
+                                <i class="bi bi-check-lg me-1"></i>وصول
+                            </button>
+                            <form action="/cheques/{{ ch.id }}/bounce" method="post" class="d-inline" onsubmit="return confirm('آیا از برگشت زدن این چک اطمینان دارید؟');">
+                                <button type="submit" class="btn btn-sm btn-outline-warning py-1 px-2" title="برگشت چک">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                            </form>
+                        {% endif %}
+                        <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2" data-bs-toggle="modal" data-bs-target="#editChequeModal{{ ch.id }}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" data-bs-toggle="modal" data-bs-target="#deleteChequeModal{{ ch.id }}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox fs-2 mb-2 d-block"></i>
+                    هیچ چکی در این وضعیت ثبت نشده است.
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
 </div>
@@ -319,4 +446,34 @@
         </div>
     </div>
 </div>
+
+<script>
+async function sendTelegramReminders() {
+    const btn = document.getElementById('btnSendTelegram');
+    if (!btn) return;
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> در حال ارسال...';
+
+    try {
+        const response = await fetch('/cheques/send-reminders', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        const data = await response.json();
+        if (data.success) {
+            alert('✅ ' + data.message);
+        } else {
+            alert('⚠️ ' + data.message);
+        }
+    } catch (err) {
+        alert('❌ خطا در برقراری ارتباط با سرور: ' + err);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    }
+}
+</script>
 {% endblock %}

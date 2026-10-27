@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import re
 import shutil
 import sys
@@ -34,8 +35,18 @@ class CloudflareTunnelService:
             "disable_web_page_preview": False
         }
 
+        proxy = (
+            getattr(settings, "HTTPS_PROXY", None)
+            or getattr(settings, "HTTP_PROXY", None)
+            or os.getenv("HTTPS_PROXY")
+            or os.getenv("HTTP_PROXY")
+        )
+        client_kwargs = {"timeout": 6.0}
+        if proxy:
+            client_kwargs["proxy"] = proxy
+
         try:
-            async with httpx.AsyncClient(timeout=20.0) as client:
+            async with httpx.AsyncClient(**client_kwargs) as client:
                 res = await client.post(url, json=payload)
                 if res.status_code == 200:
                     return True
@@ -109,7 +120,7 @@ class CloudflareTunnelService:
             return
 
         url_pattern = re.compile(r"https://[a-z0-9-]+\.trycloudflare\.com")
-        cmd = f"{executable} tunnel --url http://127.0.0.1:{self.port}"
+        cmd = f'"{executable}" tunnel --protocol http2 --url http://127.0.0.1:{self.port}'
 
         while True:
             try:
@@ -132,6 +143,18 @@ class CloudflareTunnelService:
                         extracted_url = match.group(0)
                         if extracted_url != self.last_url:
                             self.last_url = extracted_url
+                            print("\n" + "="*65, flush=True)
+                            print(f"🚀 لینک عمومی اینترنتی کلودفلر (Cloudflare Public URL):", flush=True)
+                            print(f"👉 {extracted_url}", flush=True)
+                            print(f"👉 آدرس محلی در همین سیستم: http://localhost:{self.port}", flush=True)
+                            print("="*65 + "\n", flush=True)
+
+                            try:
+                                with open("tunnel_url.txt", "w", encoding="utf-8") as f:
+                                    f.write(extracted_url)
+                            except Exception:
+                                pass
+
                             logger.info(f"⚡ Cloudflare Public URL: {extracted_url}")
                             asyncio.create_task(self.notify_users(extracted_url))
 

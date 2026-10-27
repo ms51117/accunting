@@ -1,9 +1,10 @@
+from datetime import datetime
 from fastapi import Request, HTTPException, status, Depends
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
-# مدل User را وارد کنید (مسیر را با ساختار پروژه‌تان تطبیق دهید)
+
 try:
     from app.models.user import User
 except ImportError:
@@ -11,6 +12,7 @@ except ImportError:
 
 serializer = URLSafeTimedSerializer(settings.SECRET_KEY)
 COOKIE_NAME = "session_token"
+SESSION_MAX_AGE = 86400 * 30  # ۳۰ روز
 
 def create_session_token(user_id: int, username: str) -> str:
     """ساخت توکن امن حاوی شناسه و نام کاربری"""
@@ -19,7 +21,7 @@ def create_session_token(user_id: int, username: str) -> str:
 def verify_session_token(token: str) -> dict | None:
     """اعتبارسنجی توکن (اعتبار ۳۰ روزه)"""
     try:
-        data = serializer.loads(token, max_age=86400 * 30)
+        data = serializer.loads(token, max_age=SESSION_MAX_AGE)
         return data
     except (BadSignature, SignatureExpired):
         return None
@@ -54,10 +56,18 @@ def get_current_user(
             headers={"Location": "/login"}
         )
 
+    # به‌روزرسانی زمان آخرین بازدید (حداکثر هر ۵ دقیقه یک‌بار برای بهینگی)
+    now = datetime.now()
+    if not user.last_seen or (now - user.last_seen).total_seconds() > 300:
+        user.last_seen = now
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+
     return user
 
 def is_admin_user(user: User) -> bool:
-    """تشخیص اکانت اصلی: کاربر اول سیستم یا منطبق با تنظیمات env"""
+    """تشخیص اکانت اصلی: کاربر اول سیستم، پرچم is_admin، یا منطبق با تنظیمات env"""
     admin_user = getattr(settings, "ADMIN_USERNAME", "admin")
-    return user.id == 1 or user.username == admin_user
-
+    return bool(getattr(user, 'is_admin', False) or user.id == 1 or user.username == admin_user)

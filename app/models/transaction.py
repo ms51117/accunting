@@ -25,6 +25,7 @@ class Transaction(Base):
     person_id = Column(Integer, ForeignKey("persons.id"), nullable=True)
     debt_id = Column(Integer, ForeignKey("debts.id"), nullable=True)
     cheque_id = Column(Integer, ForeignKey("cheques.id"), nullable=True)
+    category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True, index=True)
 
     # اطلاعات تراکنش
     type = Column(String(20), nullable=False)  # INCOME, EXPENSE, TRANSFER
@@ -49,5 +50,8 @@ class Transaction(Base):
 
     # ۵. چک مرتبط (در صورت وصول/خرج چک)
     cheque = relationship("Cheque", foreign_keys="Transaction.cheque_id")
+
+    # ۶. دسته‌بندی مرتبط
+    category_rel = relationship("Category", foreign_keys="Transaction.category_id", back_populates="transactions")
 
     user = relationship("User", back_populates="transactions")

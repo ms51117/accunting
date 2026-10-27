@@ -10,7 +10,14 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.config import settings
-from app.auth import create_session_token, verify_session_token, get_current_user, COOKIE_NAME, is_admin_user
+from app.auth import (
+    create_session_token,
+    verify_session_token,
+    get_current_user,
+    COOKIE_NAME,
+    SESSION_MAX_AGE,
+    is_admin_user
+)
 from app.models.account import Account
 
 try:
@@ -50,13 +57,29 @@ except ImportError:
 router = APIRouter(tags=["auth"])
 templates = Jinja2Templates(directory="app/templates")
 
+def get_admin_users_data(db: Session) -> list:
+    """محاسبه لیست کاربران و مجموع موجودی حساب‌های هر کاربر برای پنل مدیر"""
+    all_users = db.query(User).order_by(User.id.asc()).all()
+    users_data = []
+    for u in all_users:
+        total_balance = db.query(func.coalesce(func.sum(Account.balance), 0))\
+                          .filter(Account.user_id == u.id).scalar()
+        users_data.append({
+            "id": u.id,
+            "username": u.username,
+            "full_name": u.full_name or "---",
+            "total_balance": total_balance or 0,
+            "last_seen": u.last_seen
+        })
+    return users_data
+
 # --- صفحه لاگین ---
 @router.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
     token = request.cookies.get(COOKIE_NAME)
     if token and verify_session_token(token):
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
-    return templates.TemplateResponse(request=request,name="login.html",context= {"error": None})
+    return templates.TemplateResponse(request=request, name="login.html", context={"error": None})
 
 @router.post("/login")
 def login_post(
@@ -72,19 +95,23 @@ def login_post(
     if not user and db.query(User).count() == 0:
         admin_u = getattr(settings, "ADMIN_USERNAME", "admin")
         admin_p = getattr(settings, "ADMIN_PASSWORD", "admin")
-        admin_c = getattr(settings, "ADMIN_CHAT_ID", "87384626")
+        admin_c = getattr(settings, "ADMIN_CHAT_ID", None)
         if username_clean == admin_u and password == admin_p:
             user = User(
                 username=admin_u,
-                password_hash=get_password_hash(admin_p)
+                password_hash=get_password_hash(admin_p),
+                is_admin=True,
+                telegram_chat_id=admin_c
             )
             db.add(user)
             db.commit()
             db.refresh(user)
 
     if not user or not verify_password(password, user.password_hash):
-        return templates.TemplateResponse(request=request,name="login.html",context=
-            {"error": "نام کاربری یا رمز عبور اشتباه است."},
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={"error": "نام کاربری یا رمز عبور اشتباه است."},
             status_code=status.HTTP_400_BAD_REQUEST
         )
 
@@ -95,7 +122,7 @@ def login_post(
         key=COOKIE_NAME,
         value=token,
         httponly=True,
-        max_age=3600,
+        max_age=SESSION_MAX_AGE,
         samesite="lax"
     )
     return response
@@ -114,27 +141,14 @@ def profile_page(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-
     admin_status = is_admin_user(current_user)
-    print(admin_status)
-    users_data = []
+    users_data = get_admin_users_data(db) if admin_status else []
 
-    # محاسبه موجودی و لیست کاربران فقط برای مدیر اصلی
-    if admin_status:
-        all_users = db.query(User).order_by(User.id.asc()).all()
-        for u in all_users:
-            total_balance = db.query(func.coalesce(func.sum(Account.balance), 0)) \
-                .filter(Account.user_id == u.id).scalar()
-            users_data.append({
-                "id": u.id,
-                "username": u.username,
-                "full_name": u.full_name or "---",
-                "total_balance": total_balance
-            })
-
-    return templates.TemplateResponse(request=request,name="profile.html",context=
-        {
-            "request": request,
+    return templates.TemplateResponse(
+        request=request,
+        name="profile.html",
+        context={
+            "user": current_user,
             "is_admin": admin_status,
             "current_user": current_user,
             "users_data": users_data,
@@ -142,14 +156,13 @@ def profile_page(
             "success": None
         }
     )
-# --- صفحه تغییر رمز عبور ---
 
 @router.post("/profile/update-info", response_class=HTMLResponse)
 def update_profile_info(
     request: Request,
     full_name: str = Form(...),
     new_username: str = Form(None),
-    telegram_chat_id: str = Form(None),  # <--- این خط را اضافه کنید
+    telegram_chat_id: str = Form(None),
     current_password: str = Form(...),
     new_password: str = Form(None),
     confirm_password: str = Form(None),
@@ -159,20 +172,12 @@ def update_profile_info(
     admin_status = is_admin_user(current_user)
 
     def render_view(error=None, success=None, status_code=200):
-        users_data = []
-        if admin_status:
-            all_users = db.query(User).order_by(User.id.asc()).all()
-            for u in all_users:
-                total_balance = db.query(func.coalesce(func.sum(Account.balance), 0))\
-                                  .filter(Account.user_id == u.id).scalar()
-                users_data.append({
-                    "id": u.id,
-                    "username": u.username,
-                    "full_name": u.full_name or "---",
-                    "total_balance": total_balance,
-                })
-        return templates.TemplateResponse(request=request,name="profile.html",context=
-            {
+        users_data = get_admin_users_data(db) if admin_status else []
+        return templates.TemplateResponse(
+            request=request,
+            name="profile.html",
+            context={
+                "user": current_user,
                 "current_user": current_user,
                 "is_admin": admin_status,
                 "users_data": users_data,
@@ -215,8 +220,15 @@ def update_profile_info(
 
     token = create_session_token(user_id=current_user.id, username=current_user.username)
     response = render_view(success="اطلاعات پروفایل شما با موفقیت به‌روزرسانی شد.")
-    response.set_cookie(key="session_token", value=token, httponly=True, max_age=86400 * 30, samesite="lax", secure=False)
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        httponly=True,
+        max_age=SESSION_MAX_AGE,
+        samesite="lax"
+    )
     return response
+
 @router.post("/profile/create-user", response_class=HTMLResponse)
 def create_new_user(
     request: Request,
@@ -226,52 +238,45 @@ def create_new_user(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    clean_username = username.strip()
-    users_list = db.query(User).all()
     admin_status = is_admin_user(current_user)
-
-
-    if not is_admin_user(current_user):
+    if not admin_status:
         raise HTTPException(status_code=403, detail="شما دسترسی ایجاد کاربر جدید را ندارید.")
 
-    if not clean_username or not password:
-        return templates.TemplateResponse(request=request,name="profile.html",context=
-            {
+    clean_username = username.strip()
+
+    def render_admin_view(error=None, success=None, status_code=200):
+        users_data = get_admin_users_data(db)
+        return templates.TemplateResponse(
+            request=request,
+            name="profile.html",
+            context={
+                "user": current_user,
                 "current_user": current_user,
-                "users": users_list,
-                "error": "نام کاربری و رمز عبور الزامی است.",
-                "success": None
+                "is_admin": admin_status,
+                "users_data": users_data,
+                "error": error,
+                "success": success
             },
-            status_code=400
+            status_code=status_code
         )
+
+    if not clean_username or not password:
+        return render_admin_view(error="نام کاربری و رمز عبور الزامی است.", status_code=400)
+
+    if len(password) < 4:
+        return render_admin_view(error="کلمه عبور باید حداقل ۴ کاراکتر باشد.", status_code=400)
 
     exists = db.query(User).filter(User.username == clean_username).first()
     if exists:
-        return templates.TemplateResponse(request=request,name="profile.html",context=
-            {
-                "current_user": current_user,
-                "users": users_list,
-                "error": "این نام کاربری قبلاً ثبت شده است.",
-                "success": None
-            },
-            status_code=400
-        )
+        return render_admin_view(error="این نام کاربری قبلاً ثبت شده است.", status_code=400)
 
     new_u = User(
         username=clean_username,
         full_name=full_name.strip() if full_name else None,
-        password_hash=get_password_hash(password)
+        password_hash=get_password_hash(password),
+        is_admin=False
     )
     db.add(new_u)
     db.commit()
 
-    updated_users = db.query(User).all()
-    return templates.TemplateResponse(request=request,name="profile.html",context=
-        {
-            "current_user": current_user,
-            "is_admin": admin_status,
-            "users": updated_users,
-            "error": None,
-            "success": f"کاربر «{clean_username}» با موفقیت ایجاد شد."
-        }
-    )
+    return render_admin_view(success=f"کاربر «{clean_username}» با موفقیت ایجاد شد.")

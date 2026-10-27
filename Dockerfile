@@ -3,11 +3,17 @@ FROM python:3.10-slim
 # تنظیم دایرکتوری کاری
 WORKDIR /app
 
-# نصب پیش‌نیازهای سیستمی و دانلود cloudflared
+# متغیرهای محیطی بهینه‌سازی پایتون
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONIOENCODING=utf-8
+
+# نصب پیش‌نیازهای سیستمی و دانلود خودکار cloudflared متناسب با معماری سرور (AMD64 / ARM64)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
-    && curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb \
+    && ARCH=$(dpkg --print-architecture) \
+    && curl -fsSL -o cloudflared.deb "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${ARCH}.deb" \
     && dpkg -i cloudflared.deb \
     && rm cloudflared.deb \
     && apt-get clean \
@@ -20,8 +26,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # کپی کل سورس‌کد
 COPY . .
 
+# ساخت پوشه‌های ذخیره‌سازی داده و بک‌آپ
+RUN mkdir -p /app/data /app/backups
+
 # پورت برنامه
 EXPOSE 8000
 
-# اجرای مستقیم uvicorn
+# اجرای uvicorn
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

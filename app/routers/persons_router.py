@@ -1,46 +1,47 @@
-from fastapi import APIRouter, Request, Depends, Form, responses, status
+from fastapi import APIRouter, Request, Depends, Form, status, HTTPException
+from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app.auth import get_current_user
 from app.models.person import Person
-from fastapi import APIRouter, Depends, Form, HTTPException, status
-from fastapi.responses import RedirectResponse
-from sqlalchemy.orm import Session
-
+from app.models.debt import Debt
+from app.models.cheque import Cheque
+from app.models.transaction import Transaction
 from app.models.user import User
+from app.utils.jalali import format_rial, to_jalali_str
 
 router = APIRouter(prefix="/persons", tags=["Persons"], dependencies=[Depends(get_current_user)])
 templates = Jinja2Templates(directory="app/templates")
-def format_rial(value):
-    if value is None:
-        return "0"
-    try:
-        return f"{int(value):,}"
-    except (ValueError, TypeError):
-        return str(value)
 
-def format_jalali(value):
-    if not value:
-        return "-"
-    return str(value)
-
-# ۳. ثبت فیلترها روی محیط Jinja2
 templates.env.filters["rial"] = format_rial
-templates.env.filters["jalali"] = format_jalali
+templates.env.filters["jalali"] = to_jalali_str
+
 
 @router.get("")
-def list_persons(request: Request, search: str = None, db: Session = Depends(get_db),current_user: User = Depends(get_current_user)):
+def list_persons(
+    request: Request,
+    search: str = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     query = db.query(Person).filter(Person.user_id == current_user.id)
-    if search:
-        query = query.filter(Person.full_name.contains(search.strip()) | Person.phone.contains(search.strip()))
+    if search and search.strip():
+        term = search.strip()
+        query = query.filter(Person.full_name.contains(term) | Person.phone.contains(term))
+
     persons = query.order_by(Person.id.desc()).all()
     return templates.TemplateResponse(
         request=request,
         name="persons/list.html",
-        context={"persons": persons,
-        "search": search or "",
-        "user": current_user
-    })
+        context={
+            "persons": persons,
+            "search": search or "",
+            "user": current_user
+        }
+    )
+
 
 @router.post("/create")
 def create_person(
@@ -53,9 +54,13 @@ def create_person(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    clean_name = full_name.strip()
+    if not clean_name:
+        return RedirectResponse(url="/persons?error=نام_شخص_الزامی_است", status_code=status.HTTP_303_SEE_OTHER)
+
     person = Person(
         user_id=current_user.id,
-        full_name=full_name.strip(),
+        full_name=clean_name,
         phone=phone.strip() if phone else None,
         bank_name=bank_name.strip() if bank_name else None,
         card_number=card_number.strip() if card_number else None,
@@ -64,7 +69,8 @@ def create_person(
     )
     db.add(person)
     db.commit()
-    return responses.RedirectResponse(url="/persons", status_code=status.HTTP_302_FOUND)
+    return RedirectResponse(url="/persons?msg=شخص_با_موفقیت_ثبت_شد", status_code=status.HTTP_303_SEE_OTHER)
+
 
 @router.post("/{person_id}/edit")
 def edit_person(
@@ -78,11 +84,15 @@ def edit_person(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    person = db.query(Person).filter(Person.id == person_id,Person.user_id== current_user.id).first()
+    person = db.query(Person).filter(Person.id == person_id, Person.user_id == current_user.id).first()
     if not person:
-        raise HTTPException(status_code=404, detail="شخص مورد نظر یافت نشد")
+        return RedirectResponse(url="/persons?error=not_found", status_code=status.HTTP_303_SEE_OTHER)
 
-    person.full_name = full_name.strip()
+    clean_name = full_name.strip()
+    if not clean_name:
+        return RedirectResponse(url="/persons?error=نام_شخص_الزامی_است", status_code=status.HTTP_303_SEE_OTHER)
+
+    person.full_name = clean_name
     person.phone = phone.strip() if phone else None
     person.bank_name = bank_name.strip() if bank_name else None
     person.card_number = card_number.strip() if card_number else None
@@ -90,12 +100,27 @@ def edit_person(
     person.notes = notes.strip() if notes else None
 
     db.commit()
-    return RedirectResponse(url="/persons", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url="/persons?msg=اطلاعات_شخص_به‌روزرسانی_شد", status_code=status.HTTP_303_SEE_OTHER)
+
 
 @router.post("/{person_id}/delete")
-def delete_person(person_id: int, db: Session = Depends(get_db),current_user: User = Depends(get_current_user)):
-    person = db.query(Person).filter(Person.id == person_id,Person.user_id == current_user.id).first()
-    if person:
-        db.delete(person)
-        db.commit()
-    return responses.RedirectResponse(url="/persons", status_code=status.HTTP_302_FOUND)
+def delete_person(
+    person_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    person = db.query(Person).filter(Person.id == person_id, Person.user_id == current_user.id).first()
+    if not person:
+        return RedirectResponse(url="/persons?error=not_found", status_code=status.HTTP_303_SEE_OTHER)
+
+    # بررسی وابستگی‌ها (چک، بدهی، تراکنش)
+    has_debts = db.query(Debt).filter(Debt.person_id == person_id).first()
+    has_cheques = db.query(Cheque).filter(Cheque.person_id == person_id).first()
+    has_transactions = db.query(Transaction).filter(Transaction.person_id == person_id).first()
+
+    if has_debts or has_cheques or has_transactions:
+        return RedirectResponse(url="/persons?error=has_dependencies", status_code=status.HTTP_303_SEE_OTHER)
+
+    db.delete(person)
+    db.commit()
+    return RedirectResponse(url="/persons?msg=شخص_با_موفقیت_حذف_شد", status_code=status.HTTP_303_SEE_OTHER)

@@ -1,207 +1,285 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}مدیریت مالی{% endblock %}</title>
-    <!-- Bootstrap 5 RTL -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- PWA Meta Tags -->
+    <title>{% block title %}سامانه مدیریت مالی و حسابداری{% endblock %}</title>
+    <meta name="description" content="سامانه مدرن مدیریت مالی، حساب‌ها، چک‌ها، بدهی‌ها و گردش وجوه نقد">
+    <meta name="theme-color" content="#0b0f19">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="حسابداری">
+    <meta name="application-name" content="سامانه حسابداری من">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/static/icons/icon.svg">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="alternate icon" href="/static/icons/icon-192.png">
+
+    <!-- Bootstrap 5 RTL & Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/static/css/jalalidatepicker.min.css">
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@majidh1/jalalidatepicker@0.9.6/dist/jalalidatepicker.min.css">
-
-    <style>
-        .jdp-container {
-        position: absolute !important;
-        z-index: 2147483647 !important;
-        }
-    </style>
-    <!-- فونت فارسی Vazirmatn -->
+    <!-- فونت فارسی وزیرمتن (Vazirmatn) -->
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
 
-    <style>
-        body {
-            font-family: 'Vazirmatn', Tahoma, sans-serif;
-            background-color: #f8f9fa;
-        }
-            .latin-num {
-                font-family: Arial, Helvetica, sans-serif !important;
-                direction: ltr;
-                display: inline-block;
-            }
-
-        .card-stat {
-            border-radius: 12px;
-            border: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-
-        .navbar-brand {
-            font-weight: bold;
-        }
-    </style>
+    <!-- تم دارک اختصاصی (مطابق با طراحی مدرن تسک و داشبورد) -->
+    <link rel="stylesheet" href="/static/css/theme.css">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/"><i class="bi bi-wallet2 me-2"></i>حسابداری من</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navMenu">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-speedometer2"></i> داشبورد</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/accounts"><i class="bi bi-bank"></i> حساب‌ها و صندوق‌ها</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/persons"><i class="bi bi-people"></i> اشخاص و طرف‌حساب‌ها</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/cheques"><i class="bi bi-card-checklist"></i> چک‌ها</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/debts"><i class="bi bi-arrow-left-right"></i> طلب / بدهی</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/transactions"><i class="bi bi-cash-stack"></i> درآمد و هزینه</a></li>
-                </ul>
 
-                <div class="d-flex align-items-center gap-2">
-                    <!-- نمایش نام کاربر و لینک پروفایل -->
-                    {% if user %}
-                    <a href="/profile" class="btn btn-outline-info btn-sm" title=" پروفایل">
-                        <i class="bi bi-person-circle"></i>{{ user.username }}
-                    </a>
-                    {% endif %}
+    <!-- داک عمودی راست (مخصوص دسکتاپ) -->
+    <aside class="icon-dock" id="iconDock">
+        <!-- لوگو و برند اختصاصی -->
+        <a href="/" class="dock-brand" title="داشبورد مالی">
+            <i class="bi bi-wallet2"></i>
+        </a>
 
-                    <a href="/backups" class="btn btn-outline-info btn-sm">
-                        <i class="bi bi-download"></i> دریافت فایل پشتیبان دیتابیس
-                    </a>
+        <!-- منوی آیکون‌های اصلی با تولتیپ فارسی -->
+        <nav class="dock-menu">
+            <a href="/" class="dock-btn {% if request.url.path == '/' %}active{% endif %}" data-title="داشبورد">
+                <i class="bi bi-grid-fill"></i>
+            </a>
+            <a href="/accounts" class="dock-btn {% if request.url.path.startswith('/accounts') %}active{% endif %}" data-title="حساب‌ها و صندوق‌ها">
+                <i class="bi bi-bank2"></i>
+            </a>
+            <a href="/transactions" class="dock-btn {% if request.url.path.startswith('/transactions') %}active{% endif %}" data-title="گردش مالی و تراکنش‌ها">
+                <i class="bi bi-cash-coin"></i>
+            </a>
+            <a href="/categories" class="dock-btn {% if request.url.path.startswith('/categories') %}active{% endif %}" data-title="دسته‌بندی‌ها">
+                <i class="bi bi-tags-fill"></i>
+            </a>
+            <a href="/cheques" class="dock-btn {% if request.url.path.startswith('/cheques') %}active{% endif %}" data-title="مدیریت چک‌ها">
+                <i class="bi bi-card-checklist"></i>
+            </a>
+            <a href="/debts" class="dock-btn {% if request.url.path.startswith('/debts') %}active{% endif %}" data-title="دفتر طلب و بدهی">
+                <i class="bi bi-arrow-left-right"></i>
+            </a>
+            <a href="/reports" class="dock-btn {% if request.url.path.startswith('/reports') %}active{% endif %}" data-title="گزارش‌ها و نمودارها">
+                <i class="bi bi-pie-chart-fill"></i>
+            </a>
+            <a href="/persons" class="dock-btn {% if request.url.path.startswith('/persons') %}active{% endif %}" data-title="طرف‌حساب‌ها">
+                <i class="bi bi-people-fill"></i>
+            </a>
+        </nav>
 
-                    <a href="/logout" class="btn btn-outline-light btn-sm">
-                        <i class="bi bi-box-arrow-right"></i> خروج
-                    </a>
+        <!-- بخش پایینی داک (پشتیبان‌گیری، پروفایل و خروج) -->
+        <div class="dock-footer">
+            <a href="/backups" class="dock-btn {% if request.url.path.startswith('/backups') %}active{% endif %}" data-title="پشتیبان‌گیری و تلگرام">
+                <i class="bi bi-cloud-arrow-down-fill"></i>
+            </a>
+            <a href="/profile" class="dock-btn {% if request.url.path.startswith('/profile') %}active{% endif %}" data-title="تنظیمات و امنیت">
+                <i class="bi bi-person-gear"></i>
+            </a>
+
+            {% if user %}
+            <a href="/profile" class="user-avatar-squircle" title="{{ user.full_name or user.username }}">
+                {{ user.username[:1].upper() }}
+            </a>
+            <a href="/logout" class="dock-btn text-danger" data-title="خروج از حساب">
+                <i class="bi bi-box-arrow-right"></i>
+            </a>
+            {% endif %}
+        </div>
+    </aside>
+
+    <!-- کانتینر محتوای اصلی -->
+    <div class="main-wrapper">
+
+        <!-- هدر بالای صفحه مخصوص موبایل -->
+        <div class="mobile-top-bar">
+            <div class="d-flex align-items-center gap-2">
+                <a href="/" class="dock-brand m-0" style="width: 40px; height: 40px; font-size: 1.1rem; border-radius: 12px;">
+                    <i class="bi bi-wallet2"></i>
+                </a>
+                <div>
+                    <h6 class="mb-0 fw-bold text-white">حسابداری من</h6>
+                    <small class="text-muted" style="font-size: 0.72rem;">{{ user.full_name or user.username if user else '' }}</small>
                 </div>
+            </div>
 
+            <div class="d-flex align-items-center gap-2">
+                <a href="/profile" class="user-avatar-squircle" style="width: 38px; height: 38px; font-size: 0.95rem; border-radius: 12px;">
+                    {{ user.username[:1].upper() if user else 'U' }}
+                </a>
             </div>
         </div>
-    </nav>
 
-    <main class="container my-4">
+        <!-- هدر بالای صفحه دسکتاپ (Greeting & Quick Actions) -->
+        <header class="top-header-bar d-none d-lg-flex">
+            <div class="greeting-text">
+                <h2>
+                    {% if user %}
+                        روز بخیر، {{ user.full_name or user.username }}!
+                    {% else %}
+                        سامانه مدیریت مالی و حسابداری
+                    {% endif %}
+                </h2>
+                <p>خلاصه وضعیت مالی، تراکنش‌ها، اسناد و رویدادهای پیش‌رو</p>
+            </div>
 
-        <!-- نمایش پیام‌های خطا و موفقیت -->
+            <div class="header-actions">
+                <!-- فرم جستجوی سریع -->
+                <form action="/transactions" method="GET" class="header-search m-0">
+                    <i class="bi bi-search"></i>
+                    <input type="text" name="search" placeholder="جستجو در تراکنش‌ها و اسناد..." autocomplete="off">
+                </form>
+
+                <!-- زنگوله نوتیفیکیشن و آلارم -->
+                <a href="/cheques" class="header-icon-btn" title="یادآور سررسید چک‌ها">
+                    <i class="bi bi-bell"></i>
+                    <span class="notify-dot"></span>
+                </a>
+            </div>
+        </header>
+
+        <!-- پیام‌های سیستم (خطا و موفقیت) -->
         {% if request.query_params.get('error') %}
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-            {% if request.query_params.get('error') == 'has_dependencies' %}
-                این مورد به دلیل داشتن تراکنش یا چک متصل قابل حذف نیست.
-            {% elif request.query_params.get('error') == 'not_found' %}
-                مورد نظر یافت نشد.
-            {% else %}
-                {{ request.query_params.get('error') }}
-            {% endif %}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <div class="alert alert-danger alert-dismissible fade show border-0 rounded-4 shadow-sm mb-4" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3) !important; color: #fca5a5;" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-exclamation-triangle-fill fs-5 me-2"></i>
+                <div>
+                    {% if request.query_params.get('error') == 'has_dependencies' %}
+                        این مورد به دلیل داشتن تراکنش، چک یا سند متصل قابل حذف نیست.
+                    {% elif request.query_params.get('error') == 'not_found' %}
+                        رکورد مورد نظر یافت نشد.
+                    {% else %}
+                        {{ request.query_params.get('error') }}
+                    {% endif %}
+                </div>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
         {% endif %}
 
         {% if request.query_params.get('msg') %}
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i>{{ request.query_params.get('msg') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <div class="alert alert-success alert-dismissible fade show border-0 rounded-4 shadow-sm mb-4" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3) !important; color: #6ee7b7;" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-check-circle-fill fs-5 me-2"></i>
+                <div>{{ request.query_params.get('msg') }}</div>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
         {% endif %}
 
+        <!-- محتوای صفحات -->
+        <main class="flex-grow-1">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
 
-        {% block content %}{% endblock %}
-    </main>
+    <!-- داک شناور پایین صفحه (PWA Mobile Dock) -->
+    <nav class="mobile-dock">
+        <a href="/" class="mobile-dock-item {% if request.url.path == '/' %}active{% endif %}" title="داشبورد">
+            <i class="bi bi-grid-fill"></i>
+        </a>
+        <a href="/accounts" class="mobile-dock-item {% if request.url.path.startswith('/accounts') %}active{% endif %}" title="حساب‌ها">
+            <i class="bi bi-bank2"></i>
+        </a>
+        <a href="/transactions" class="mobile-dock-item {% if request.url.path.startswith('/transactions') %}active{% endif %}" title="تراکنش‌ها">
+            <i class="bi bi-cash-coin"></i>
+        </a>
+        <a href="/categories" class="mobile-dock-item {% if request.url.path.startswith('/categories') %}active{% endif %}" title="دسته‌ها">
+            <i class="bi bi-tags-fill"></i>
+        </a>
+        <a href="/cheques" class="mobile-dock-item {% if request.url.path.startswith('/cheques') %}active{% endif %}" title="چک‌ها">
+            <i class="bi bi-card-checklist"></i>
+        </a>
+        <a href="/debts" class="mobile-dock-item {% if request.url.path.startswith('/debts') %}active{% endif %}" title="طلب و بدهی">
+            <i class="bi bi-arrow-left-right"></i>
+        </a>
+        <a href="/reports" class="mobile-dock-item {% if request.url.path.startswith('/reports') %}active{% endif %}" title="گزارش‌ها">
+            <i class="bi bi-pie-chart-fill"></i>
+        </a>
+        <a href="/persons" class="mobile-dock-item {% if request.url.path.startswith('/persons') %}active{% endif %}" title="اشخاص">
+            <i class="bi bi-people-fill"></i>
+        </a>
+    </nav>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@majidh1/jalalidatepicker@0.9.6/dist/jalalidatepicker.min.js"></script>
+    <!-- کتابخانه‌های جاوااسکریپت محلی -->
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/jalalidatepicker.min.js"></script>
+    <script src="/static/js/chart.umd.min.js"></script>
 
     <script>
+        // ۱. ثبت Service Worker برای قابلیت آفلاین و PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((reg) => {
+                        console.log('PWA Service Worker registered successfully with scope:', reg.scope);
+                    })
+                    .catch((err) => {
+                        console.warn('PWA Service Worker registration failed:', err);
+                    });
+            });
+        }
+
+
+        // ۳. فعال‌سازی تقویم شمسی
         document.addEventListener("DOMContentLoaded", function () {
             if (typeof jalaliDatepicker !== "undefined") {
                 jalaliDatepicker.startWatch({
-                    container: "body",       // پیش‌فرضش هم // ← این کمئن باش
-                    zIndex: 2147483647,      // ← این کافیه، دیگه CSS نزن
+                    container: "body",
+                    zIndex: 2147483647,
                     showEmptyBtn: true,
                     autoHide: true
                 });
-                console.log("✅ jalaliDatepicker لود و فعال شد");
-            } else {
-                console.error("❌ jalaliDatepicker لود نشد");
             }
         });
-    </script>
 
-    <!-- اسکریپت فرمت سه‌رقم سه‌رقم مبالغ هنگام تایپ -->
-    <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        // تابع تبدیل اعداد فارسی/عربی به انگلیسی
-        function toEnglishDigits(str) {
-            return str.replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
-                      .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
-        }
+        // ۴. تابع ۳ رقم جدا کردن مبالغ و ارقام در اینپوت‌ها
+        document.addEventListener("DOMContentLoaded", function () {
+            function toEnglishDigits(str) {
+                if (!str) return "";
+                return str.toString()
+                          .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
+                          .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+            }
 
-        // تابع ۳ رقم جدا کردن
-        function formatNumber(value) {
-            let clean = toEnglishDigits(value).replace(/\D/g, ""); // حذف هر چیزی غیر از عدد
-            if (!clean) return "";
-            return clean.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        }
+            function formatNumber(value) {
+                let clean = toEnglishDigits(value).replace(/\D/g, "");
+                if (!clean) return "";
+                return clean.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            }
 
-        // انتخاب تمام فیلدهای مبلغ
-        function applyCurrencyMask() {
-            const inputs = document.querySelectorAll('input.currency-input, input[name="amount"], input[name="pay_amount"], input[name="balance"],input[name="paid_amount"]');
-
-            inputs.forEach(input => {
-                // تغییر تایپ به text برای اجازه دادن به کاما
-                input.type = "text";
-                input.setAttribute("inputmode", "numeric");
-                input.setAttribute("autocomplete", "off");
-
-                // اگر مقدار اولیه دارد فرمت شود
-                if (input.value) {
-                    input.value = formatNumber(input.value);
-                }
-
-                // هنگام تایپ کاربر
-                input.addEventListener("input", function (e) {
-                    const cursorPosition = this.selectionStart;
-                    const originalLength = this.value.length;
-
-                    this.value = formatNumber(this.value);
-
-                    // حفظ موقعیت کرسر
-                    const newLength = this.value.length;
-                    const newPosition = cursorPosition + (newLength - originalLength);
-                    this.setSelectionRange(newPosition, newPosition);
-                });
-            });
-        }
-
-        // حذف کاماها قبل از ارسال فرم به بک‌اند تا پایتون خطا نگیرد
-        document.querySelectorAll("form").forEach(form => {
-            form.addEventListener("submit", function () {
-                const inputs = this.querySelectorAll('input.currency-input, input[name="amount"], input[name="pay_amount"], input[name="balance"],input[name="paid_amount"]');
+            function applyCurrencyMask() {
+                const inputs = document.querySelectorAll('input.currency-input, input[name="amount"], input[name="pay_amount"], input[name="balance"], input[name="paid_amount"]');
                 inputs.forEach(input => {
-                    input.value = toEnglishDigits(input.value).replace(/\D/g, "");
+                    input.type = "text";
+                    input.setAttribute("inputmode", "numeric");
+                    input.setAttribute("autocomplete", "off");
+
+                    if (input.value) {
+                        input.value = formatNumber(input.value);
+                    }
+
+                    input.addEventListener("input", function () {
+                        const cursorPosition = this.selectionStart;
+                        const originalLength = this.value.length;
+                        this.value = formatNumber(this.value);
+                        const newLength = this.value.length;
+                        const newPosition = cursorPosition + (newLength - originalLength);
+                        this.setSelectionRange(newPosition, newPosition);
+                    });
+                });
+            }
+
+            // پاک‌سازی کاماها قبل از ارسال فرم
+            document.querySelectorAll("form").forEach(form => {
+                form.addEventListener("submit", function () {
+                    const inputs = this.querySelectorAll('input.currency-input, input[name="amount"], input[name="pay_amount"], input[name="balance"], input[name="paid_amount"]');
+                    inputs.forEach(input => {
+                        input.value = toEnglishDigits(input.value).replace(/\D/g, "");
+                    });
                 });
             });
+
+            applyCurrencyMask();
         });
-
-        applyCurrencyMask();
-    });
     </script>
-    <script>
-      document.addEventListener('click', function (event) {
-        const navMenu = document.getElementById('navMenu');
-        const toggler = document.querySelector('.navbar-toggler');
-
-        // اگر منو در حالت باز باشد
-        if (navMenu && navMenu.classList.contains('show')) {
-          // اگر کلیک خارج از خود منو و خارج از دکمه همبرگری بود
-          if (!navMenu.contains(event.target) && !toggler.contains(event.target)) {
-            const bsCollapse = bootstrap.Collapse.getInstance(navMenu) || new bootstrap.Collapse(navMenu);
-            bsCollapse.hide();
-          }
-        }
-      });
-    </script>
-
-
 </body>
 </html>

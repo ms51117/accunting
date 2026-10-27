@@ -37,6 +37,7 @@ class Cheque(Base):
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True)  # حسابی که چک به آن واریز یا از آن کسر می‌شود
     description = Column(Text, nullable=True)
     cleared_date = Column(Date, nullable=True)
+    last_notified_date = Column(Date, nullable=True)  # تاریخ آخرین هشدار ارسالی به تلگرام
     created_at = Column(DateTime, default=func.now())
 
     person = relationship("Person", back_populates="cheques")

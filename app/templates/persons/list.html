@@ -36,7 +36,7 @@
                     <td class="fw-bold">{{ p.full_name }}</td>
                     <td>{{ p.phone or '-' }}</td>
                     <td>
-                        {% if p.bank_name %}<span class="badge bg-light text-dark border me-1">{{ p.bank_name }}</span>{% endif %}
+                        {% if p.bank_name %}<span class="badge border border-secondary border-opacity-25 text-info me-1" style="background: #111724;">{{ p.bank_name }}</span>{% endif %}
                         {% if p.card_number %}<small class="latin-num text-muted d-block">{{ p.card_number }}</small>{% endif %}
                         {% if p.sheba %}<small class="latin-num text-muted d-block">{{ p.sheba }}</small>{% endif %}
                         {% if not p.bank_name and not p.card_number and not p.sheba %}-{% endif %}

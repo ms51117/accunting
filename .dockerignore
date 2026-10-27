@@ -8,6 +8,13 @@ venv/
 .venv/
 .git
 .gitignore
+.idea/
+.vscode/
+cloudflared.exe
+backups/
+data/
 *.db
 *.sqlite3
 .env
+tunnel_url.txt
+*.log

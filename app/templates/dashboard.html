@@ -1,110 +1,217 @@
 {% extends "base.html" %}
-{% block title %}داشبورد مدیریت مالی{% endblock %}
+{% block title %}داشبورد مدیریت مالی و دارایی‌ها{% endblock %}
 
 {% block content %}
+<!-- ردیف کارت‌های آماری کلیدی -->
 <div class="row g-3 mb-4">
-    <!-- کل موجودی -->
-    <div class="col-md-4">
-        <div class="card card-stat bg-primary text-white p-3">
-            <span class="fs-6 opacity-75">موجودی کل نقدینگی</span>
-            <h3 class="fw-bold mt-2 mb-0 latin-num">{{ total_balance | rial }} <small class="fs-6">ریال</small></h3>
+    <!-- موجودی کل نقدینگی -->
+    <div class="col-12 col-md-4">
+        <div class="card p-3 h-100 position-relative overflow-hidden" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid rgba(59, 130, 246, 0.35);">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="text-secondary small fw-medium">موجودی کل نقدینگی (بانک‌ها و صندوق)</span>
+                    <h3 class="fw-bold mt-2 mb-0 text-white latin-num">{{ total_balance | rial }} <small class="fs-6 text-muted">ریال</small></h3>
+                </div>
+                <div class="dock-brand m-0" style="width: 44px; height: 44px; font-size: 1.25rem;">
+                    <i class="bi bi-wallet2"></i>
+                </div>
+            </div>
+            <div class="mt-3 pt-2 border-top border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
+                <span class="text-muted small"><i class="bi bi-shield-check text-success me-1"></i>نقدینگی در دسترس</span>
+                <a href="/accounts" class="text-info small text-decoration-none">مشاهده حساب‌ها <i class="bi bi-arrow-left"></i></a>
+            </div>
         </div>
     </div>
+
     <!-- چک‌های در جریان -->
-    <div class="col-md-4">
-        <div class="card card-stat bg-white p-3 border-start border-success border-4">
-            <span class="text-muted small">چک‌های دریافتی نزد صندوق (پاس‌نشده)</span>
-            <h4 class="text-success fw-bold mt-1 mb-0 latin-num">{{ pending_receivable_cheques | rial }} <small class="fs-6">ریال</small></h4>
-            <hr class="my-2">
-            <span class="text-muted small">چک‌های پرداختی ما (پاس‌نشده)</span>
-            <h4 class="text-danger fw-bold mt-1 mb-0 latin-num">{{ pending_payable_cheques | rial }} <small class="fs-6">ریال</small></h4>
+    <div class="col-12 col-md-4">
+        <div class="card p-3 h-100" style="background: var(--bg-card); border-top: 4px solid var(--accent-lime);">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-secondary small fw-medium">چک‌های دریافتی نزد صندوق</span>
+                <span class="tag-dot lime">در انتظار پاس</span>
+            </div>
+            <h4 class="text-success fw-bold mb-2 latin-num">{{ pending_receivable_cheques | rial }} <small class="fs-6 text-muted">ریال</small></h4>
+            <hr class="my-2 border-secondary border-opacity-25">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="text-secondary small">چک‌های پرداختی ما:</span>
+                <span class="text-danger fw-bold latin-num">{{ pending_payable_cheques | rial }} <small class="text-muted">ریال</small></span>
+            </div>
         </div>
     </div>
+
     <!-- مطالبات و بدهی‌ها -->
-    <div class="col-md-4">
-        <div class="card card-stat bg-white p-3 border-start border-warning border-4">
-            <span class="text-muted small">کل طلب ما از اشخاص</span>
-            <h4 class="text-info fw-bold mt-1 mb-0 latin-num">{{ total_receivable_debt | rial }} <small class="fs-6">ریال</small></h4>
-            <hr class="my-2">
-            <span class="text-muted small">کل بدهی ما به اشخاص</span>
-            <h4 class="text-secondary fw-bold mt-1 mb-0 latin-num">{{ total_payable_debt | rial }} <small class="fs-6">ریال</small></h4>
+    <div class="col-12 col-md-4">
+        <div class="card p-3 h-100" style="background: var(--bg-card); border-top: 4px solid var(--accent-orange);">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-secondary small fw-medium">طلب ما از طرف‌حساب‌ها</span>
+                <span class="tag-dot orange">مطالبات</span>
+            </div>
+            <h4 class="text-info fw-bold mb-2 latin-num">{{ total_receivable_debt | rial }} <small class="fs-6 text-muted">ریال</small></h4>
+            <hr class="my-2 border-secondary border-opacity-25">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="text-secondary small">بدهی ما به اشخاص:</span>
+                <span class="text-warning fw-bold latin-num">{{ total_payable_debt | rial }} <small class="text-muted">ریال</small></span>
+            </div>
         </div>
     </div>
 </div>
 
 <div class="row g-4">
-    <!--    ستون سمت راست-->
-    <div class="col-lg-6">
-        <!-- چک‌های نزدیک به سررسید -->
-        <div class="card mb-4 shadow-sm">
-            <div class="card-header bg-white py-3">
-                <h5 class="card-title fw-bold mb-0"><i class="bi bi-calendar-event text-warning me-2"></i>سررسید چک‌های پیش‌رو</h5>
+    <!-- ستون اصلی (تراکنش‌ها و مانده حساب طرف‌حساب‌ها) -->
+    <div class="col-12 col-lg-7">
+        
+        <!-- نمودار روند گردش مالی ماهانه -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-graph-up text-primary fs-5"></i>
+                    <div>
+                        <h5 class="card-title fw-bold mb-0">تحلیل گردش مالی ماهانه</h5>
+                        <small class="text-muted" style="font-size: 0.76rem;">مقایسه درآمد، هزینه و تراز نقدینگی (۶ ماه اخیر)</small>
+                    </div>
+                </div>
+                <a href="/reports" class="btn btn-sm btn-outline-light py-1 px-3">
+                    گزارش جامع <i class="bi bi-arrow-left me-1"></i>
+                </a>
             </div>
-            <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead class="table-light small">
-                        <tr>
-                            <th>نوع</th>
-                            <th>طرف‌حساب</th>
-                            <th>مبلغ (ریال)</th>
-                            <th>سررسید</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for ch in upcoming_cheques %}
-                        <tr>
-                            <td>
-                                {% if ch.type == 'RECEIVABLE' %}
-                                <span class="badge bg-success-subtle text-success border border-success">دریافتی</span>
-                                {% else %}
-                                <span class="badge bg-danger-subtle text-danger border border-danger">پرداختی</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ ch.person.full_name }}</td>
-                            <td class="fw-bold">{{ ch.amount | rial }}</td>
-                            <td class="text-muted">{{ ch.due_date | jalali }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="4" class="text-center py-3 text-muted">چک در انتظاری وجود ندارد.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+
+            <div class="card-body p-3">
+                <!-- شاخص‌های فشرده بالای نمودار -->
+                <div class="row g-2 mb-3 text-center">
+                    <div class="col-4">
+                        <div class="p-2 rounded-3" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2);">
+                            <span class="text-muted d-block" style="font-size: 0.72rem;">کل درآمد ۶ ماه</span>
+                            <span class="text-success fw-bold latin-num fs-6">{{ total_income_period | rial }}</span>
+                            <span class="text-muted" style="font-size: 0.68rem;">ریال</span>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-2 rounded-3" style="background: rgba(244, 63, 94, 0.08); border: 1px solid rgba(244, 63, 94, 0.2);">
+                            <span class="text-muted d-block" style="font-size: 0.72rem;">کل هزینه ۶ ماه</span>
+                            <span class="text-danger fw-bold latin-num fs-6">{{ total_expense_period | rial }}</span>
+                            <span class="text-muted" style="font-size: 0.68rem;">ریال</span>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-2 rounded-3" style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.2);">
+                            <span class="text-muted d-block" style="font-size: 0.72rem;">تراز خالص دوره</span>
+                            <span class="{% if net_period >= 0 %}text-info{% else %}text-warning{% endif %} fw-bold latin-num fs-6">
+                                {{ net_period | rial }}
+                            </span>
+                            <span class="text-muted" style="font-size: 0.68rem;">ریال</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- کانتینر نمودار Chart.js -->
+                <div class="position-relative" style="height: 260px; width: 100%;">
+                    <canvas id="monthlyTrendChart"></canvas>
+                </div>
             </div>
         </div>
-            <!-- وضعیت مانده اشخاص (بدهکاران / طلبکاران) -->
-        <div class="card mb-4 shadow-sm">
-            <div class="card-header bg-white py-3">
-                <h5 class="card-title mb-0 fw-bold"><i class="bi bi-person text-primary me-2"></i>وضعیت مانده اشخاص (طرف‌حساب‌ها)</h5>
+
+        <!-- سهم سرفصل‌های هزینه -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-pie-chart text-warning fs-5"></i>
+                    <div>
+                        <h5 class="card-title fw-bold mb-0">سهم هزینه‌ها برحسب دسته‌بندی</h5>
+                        <small class="text-muted" style="font-size: 0.76rem;">سرفصل‌های عمده مخارج ثبت‌شده</small>
+                    </div>
+                </div>
+                {% if top_cat %}
+                <span class="badge bg-danger-subtle text-danger border border-danger">
+                    بیشترین: {{ top_cat.title }}
+                </span>
+                {% endif %}
+            </div>
+
+            <div class="card-body p-3">
+                {% if category_expenses.categories %}
+                <div class="row align-items-center g-3">
+                    <div class="col-12 col-md-5 text-center">
+                        <div class="position-relative d-inline-block" style="height: 200px; width: 200px; max-width: 100%;">
+                            <canvas id="categoryDonutChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-7">
+                        <div class="d-flex flex-column gap-2">
+                            {% for cat in top_categories %}
+                            <div class="p-2 rounded-3" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="small fw-semibold text-white">
+                                        <i class="bi bi-circle-fill me-1" style="color: {{ cat.color }}; font-size: 0.65rem;"></i>
+                                        {{ cat.title }}
+                                    </span>
+                                    <span class="small latin-num fw-bold text-white">
+                                        {{ cat.amount | rial }} <span class="text-muted" style="font-size: 0.7rem;">ریال</span>
+                                        <span class="badge ms-1" style="background: {{ cat.color }}22; color: {{ cat.color }}; font-size: 0.72rem;">{{ cat.percent }}%</span>
+                                    </span>
+                                </div>
+                                <div class="progress" style="height: 5px; background: rgba(255,255,255,0.08);">
+                                    <div class="progress-bar" role="progressbar" style="width: {{ cat.percent }}%; background-color: {{ cat.color }};" aria-valuenow="{{ cat.percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-pie-chart text-secondary fs-2 d-block mb-2"></i>
+                    هنوز هزینه‌ای با دسته‌بندی مشخص ثبت نشده است.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- تراز حساب طرف‌حساب‌ها -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-people text-info fs-5"></i>
+                    <h5 class="card-title fw-bold mb-0">تراز حساب طرف‌حساب‌ها</h5>
+                </div>
+                <a href="/debts" class="btn btn-sm btn-outline-light py-1 px-3">
+                    دفتر بدهی‌ها <i class="bi bi-arrow-left me-1"></i>
+                </a>
             </div>
             <div class="card-body p-0">
                 {% if debt_summary_list %}
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0 text-center">
                         <thead class="table-light">
                             <tr>
-                                <th>نام شخص</th>
+                                <th class="text-end ps-3">طرف‌حساب</th>
                                 <th>طلب ما (ریال)</th>
                                 <th>بدهی ما (ریال)</th>
-                                <th>وضعیت نهایی</th>
+                                <th>وضعیت تراز نهایی</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for item in debt_summary_list %}
                             <tr>
-                                <td class="fw-semibold">{{ item.person.full_name }}</td>
-                                <td class="text-success">{{ item.receivable | rial }}</td>
-                                <td class="text-danger">{{ item.payable | rial }}</td>
+                                <td class="fw-semibold text-end ps-3">
+                                    <i class="bi bi-person me-1 text-primary opacity-75"></i>{{ item.person.full_name }}
+                                </td>
+                                <td>
+                                    <span class="text-success fw-bold latin-num">{{ item.receivable | rial }}</span>
+                                </td>
+                                <td>
+                                    <span class="text-danger fw-bold latin-num">{{ item.payable | rial }}</span>
+                                </td>
                                 <td>
                                     {% if item.net > 0 %}
-                                        <span class="badge bg-success-subtle text-success border border-success">
-                                            طلبکاریم: {{ item.net | rial }}
+                                        <span class="badge bg-success-subtle text-success border border-success py-1 px-3">
+                                            طلبکاریم: <span class="latin-num fw-bold">{{ item.net | rial }}</span> ریال
+                                        </span>
+                                    {% elif item.net < 0 %}
+                                        <span class="badge bg-danger-subtle text-danger border border-danger py-1 px-3">
+                                            بدهکاریم: <span class="latin-num fw-bold">{{ (item.net * -1) | rial }}</span> ریال
                                         </span>
                                     {% else %}
-                                        <span class="badge bg-danger-subtle text-danger border border-danger">
-                                            بدهکاریم: {{ (item.net * -1) | rial }}
-                                        </span>
+                                        <span class="badge bg-secondary-subtle text-secondary border py-1 px-3">تسویه صفر</span>
                                     {% endif %}
                                 </td>
                             </tr>
@@ -113,63 +220,255 @@
                     </table>
                 </div>
                 {% else %}
-                <div class="p-3 text-center text-muted">
-                    هیچ بدهی یا طلب فعالی ثبت نشده است.
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-person-check fs-2 d-block mb-2 text-secondary"></i>
+                    کلیه حساب‌ها تسویه هستند و بدهی یا طلبی ثبت نشده است.
                 </div>
                 {% endif %}
             </div>
         </div>
-
     </div>
 
-    <!--    ستون سمت چپ-->
-    <div class="col-lg-6">
-        <!-- آخرین تراکنش‌ها -->
-        <div class="card mb-4 shadow-sm">
-            <div class="card-header bg-white py-3">
-                <h5 class="card-title fw-bold mb-0"><i class="bi bi-clock-history text-primary me-2"></i>تراکنش‌های اخیر</h5>
+    <!-- ستون سررسیدها (مشابه بخش Scheduled در طرح مدرن) -->
+    <div class="col-12 col-lg-5">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-calendar2-week text-warning fs-5"></i>
+                    <div>
+                        <h5 class="card-title fw-bold mb-0">سررسیدهای پیش‌رو</h5>
+                        <small class="text-muted" style="font-size: 0.76rem;">رویدادها و اسناد دارای سررسید</small>
+                    </div>
+                </div>
+                <a href="/cheques" class="btn btn-sm btn-outline-light py-1 px-2">
+                    مدیریت چک‌ها
+                </a>
             </div>
-            <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead class="table-light small">
-                        <tr>
-                            <th>نوع</th>
-                            <th>دسته‌بندی</th>
-                            <th>حساب</th>
-                            <th>مبلغ (ریال)</th>
-                            <th>تاریخ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for tr in recent_transactions %}
-                        <tr>
-                            <td>
-                                {% if tr.type == 'INCOME' %}
-                                <span class="text-success"><i class="bi bi-arrow-down-left"></i> درآمد</span>
-                                {% elif tr.type == 'EXPENSE' %}
-                                <span class="text-danger"><i class="bi bi-arrow-up-right"></i> هزینه</span>
-                                {% else %}
-                                <span class="text-secondary"><i class="bi bi-arrow-left-right"></i> انتقال</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ tr.category }}</td>
-                            <td class="small">{{ tr.account.title }}</td>
-                            <td class="fw-bold">{{ tr.amount | rial }}</td>
-                            <td class="text-muted">{{ tr.trans_date | jalali }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="5" class="text-center py-3 text-muted">هیچ تراکنشی ثبت نشده است.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+
+            <div class="card-body p-3">
+                {% for ch in upcoming_cheques %}
+                <div class="card mb-3 p-3 position-relative {% if ch.type == 'PAYABLE' %}accent-bar-orange{% else %}accent-bar-lime{% endif %}" style="background: #141d2c; border: 1px solid rgba(255,255,255,0.06);">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            {% if ch.type == 'PAYABLE' %}
+                                <span class="tag-dot orange mb-1">چک پرداختی ما</span>
+                            {% else %}
+                                <span class="tag-dot lime mb-1">چک دریافتی نزد ما</span>
+                            {% endif %}
+                            <h6 class="fw-bold mb-0 text-white mt-1">{{ ch.person.full_name }}</h6>
+                        </div>
+                        <div class="text-end">
+                            <span class="fw-bold latin-num fs-6 text-primary">
+                                {{ ch.amount | rial }} <small class="text-secondary fs-7">ریال</small>
+                            </span>
+                            <div class="small text-secondary mt-1">
+                                <i class="bi bi-calendar-event me-1 text-warning opacity-75"></i>{{ ch.due_date | jalali }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary border-opacity-25 small text-muted">
+                        <span><i class="bi bi-bank me-1"></i>{{ ch.bank_name or 'بدون بانک' }}</span>
+                        <a href="/cheques" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.76rem;">
+                            بررسی وضعیت
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-check2-circle text-success fs-1 d-block mb-2"></i>
+                    <span>هیچ چک در انتظاری نزدیک به سررسید وجود ندارد.</span>
+                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
-
-
-
-
 </div>
+
+<!-- اسکریپت راه‌اندازی نمودارهای داشبورد -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    if (typeof Chart === "undefined") {
+        console.warn("کتابخانه Chart.js بارگذاری نشده است.");
+        return;
+    }
+
+    // تنظیمات پیش‌فرض فونت و رنگ برای سازگاری کامل با تم تیره
+    Chart.defaults.font.family = "'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    Chart.defaults.color = '#94a3b8';
+
+    const fmtMoney = (val) => {
+        if (val === null || val === undefined) return "۰ ریال";
+        return Number(val).toLocaleString("fa-IR") + " ریال";
+    };
+
+    // ۱. نمودار میله‌ای و خطی روند ماهانه گردش مالی
+    const trendCtx = document.getElementById('monthlyTrendChart');
+    if (trendCtx) {
+        const trendLabels = {{ monthly_trends.labels | tojson }};
+        const incomes = {{ monthly_trends.incomes | tojson }};
+        const expenses = {{ monthly_trends.expenses | tojson }};
+        const netFlows = {{ monthly_trends.net_flows | tojson }};
+
+        new Chart(trendCtx, {
+            data: {
+                labels: trendLabels,
+                datasets: [
+                    {
+                        type: 'line',
+                        label: 'تراز خالص نقدینگی',
+                        data: netFlows,
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                        borderWidth: 2.5,
+                        pointBackgroundColor: '#38bdf8',
+                        pointBorderColor: '#0f172a',
+                        pointBorderWidth: 2,
+                        pointRadius: 4.5,
+                        pointHoverRadius: 6,
+                        tension: 0.35,
+                        fill: false,
+                        order: 1
+                    },
+                    {
+                        type: 'bar',
+                        label: 'درآمدها',
+                        data: incomes,
+                        backgroundColor: 'rgba(16, 185, 129, 0.85)',
+                        hoverBackgroundColor: '#10b981',
+                        borderRadius: 6,
+                        maxBarThickness: 32,
+                        order: 2
+                    },
+                    {
+                        type: 'bar',
+                        label: 'هزینه‌ها',
+                        data: expenses,
+                        backgroundColor: 'rgba(244, 63, 94, 0.85)',
+                        hoverBackgroundColor: '#f43f5e',
+                        borderRadius: 6,
+                        maxBarThickness: 32,
+                        order: 3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        rtl: true,
+                        labels: {
+                            color: '#cbd5e1',
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            boxWidth: 8,
+                            padding: 14,
+                            font: { size: 12 }
+                        }
+                    },
+                    tooltip: {
+                        rtl: true,
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        borderColor: 'rgba(255, 255, 255, 0.15)',
+                        borderWidth: 1,
+                        padding: 10,
+                        titleFont: { size: 13, weight: 'bold' },
+                        bodyFont: { size: 12 },
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.dataset.label + ': ' + fmtMoney(ctx.raw);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.04)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { size: 11 }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.06)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { size: 11 },
+                            callback: function(val) {
+                                if (Math.abs(val) >= 1000000000) {
+                                    return (val / 1000000000).toLocaleString('fa-IR') + ' م.م';
+                                }
+                                if (Math.abs(val) >= 1000000) {
+                                    return (val / 1000000).toLocaleString('fa-IR') + ' م';
+                                }
+                                return val.toLocaleString('fa-IR');
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // ۲. نمودار دونات سهم دسته‌بندی هزینه‌ها
+    const donutCtx = document.getElementById('categoryDonutChart');
+    if (donutCtx) {
+        const catLabels = {{ category_expenses.labels | tojson }};
+        const catAmounts = {{ category_expenses.amounts | tojson }};
+        const catColors = {{ category_expenses.colors | tojson }};
+
+        if (catAmounts && catAmounts.length > 0) {
+            new Chart(donutCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: catLabels,
+                    datasets: [{
+                        data: catAmounts,
+                        backgroundColor: catColors,
+                        borderColor: '#111827',
+                        borderWidth: 3,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '68%',
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            rtl: true,
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            borderColor: 'rgba(255, 255, 255, 0.15)',
+                            borderWidth: 1,
+                            padding: 10,
+                            callbacks: {
+                                label: function(ctx) {
+                                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                    const pct = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : 0;
+                                    return ctx.label + ': ' + fmtMoney(ctx.raw) + ' (' + Number(pct).toLocaleString('fa-IR') + '٪)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+});
+</script>
 {% endblock %}

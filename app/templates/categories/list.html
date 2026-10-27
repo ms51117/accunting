@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+{% block title %}مدیریت دسته‌بندی‌ها{% endblock %}
+
+{% block content %}
+<!-- هدر بالای صفحه دسته‌بندی‌ها -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h4 class="mb-1 text-white fw-bold">
+            <i class="bi bi-tags-fill text-primary me-2"></i>مدیریت دسته‌بندی‌ها
+        </h4>
+        <span class="text-secondary small">
+            تعریف و شخصی‌سازی سرفصل‌های درآمد و هزینه جهت تفکیک دقیق گردش مالی و گزارش‌گیری
+        </span>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newCategoryModal">
+            <i class="bi bi-plus-lg me-1"></i> دسته‌بندی جدید
+        </button>
+    </div>
+</div>
+
+<!-- کارت‌های خلاصه آمار -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+        <div class="card p-3 border-0 shadow-sm" style="background: #151d2c; border: 1px solid rgba(255,255,255,0.06) !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-secondary small d-block mb-1">کل دسته‌بندی‌های فعال</span>
+                    <h3 class="mb-0 fw-bold text-white latin-num">{{ total_count }}</h3>
+                </div>
+                <div class="p-3 rounded-4" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
+                    <i class="bi bi-tags fs-3"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4">
+        <div class="card p-3 border-0 shadow-sm" style="background: #151d2c; border: 1px solid rgba(255,255,255,0.06) !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-secondary small d-block mb-1">سرفصل‌های هزینه</span>
+                    <h3 class="mb-0 fw-bold text-danger latin-num">{{ expense_count }}</h3>
+                </div>
+                <div class="p-3 rounded-4" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
+                    <i class="bi bi-arrow-up-right-circle fs-3"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4">
+        <div class="card p-3 border-0 shadow-sm" style="background: #151d2c; border: 1px solid rgba(255,255,255,0.06) !important;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-secondary small d-block mb-1">سرفصل‌های درآمد</span>
+                    <h3 class="mb-0 fw-bold text-success latin-num">{{ income_count }}</h3>
+                </div>
+                <div class="p-3 rounded-4" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                    <i class="bi bi-arrow-down-left-circle fs-3"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- نوار فیلتر و جستجو -->
+<div class="card border-0 shadow-sm mb-4" style="background: #151d2c; border: 1px solid rgba(255,255,255,0.06) !important;">
+    <div class="card-body p-3">
+        <form method="GET" action="/categories" class="row g-2 align-items-center">
+            <div class="col-12 col-md-4">
+                <div class="d-flex gap-1">
+                    <a href="/categories?type_filter=ALL" class="btn btn-sm flex-fill {% if type_filter == 'ALL' %}btn-primary{% else %}btn-outline-secondary text-secondary{% endif %}">
+                        همه دسته‌ها
+                    </a>
+                    <a href="/categories?type_filter=EXPENSE" class="btn btn-sm flex-fill {% if type_filter == 'EXPENSE' %}btn-danger{% else %}btn-outline-secondary text-secondary{% endif %}">
+                        هزینه‌ها
+                    </a>
+                    <a href="/categories?type_filter=INCOME" class="btn btn-sm flex-fill {% if type_filter == 'INCOME' %}btn-success{% else %}btn-outline-secondary text-secondary{% endif %}">
+                        درآمدها
+                    </a>
+                </div>
+            </div>
+            <div class="col-8 col-md-6">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-search"></i></span>
+                    <input type="text" name="search" value="{{ search or '' }}" class="form-control" placeholder="جستجو در نام یا شرح دسته‌بندی...">
+                </div>
+            </div>
+            <div class="col-4 col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-primary w-100">فیلتر</button>
+                {% if search or type_filter != 'ALL' %}
+                <a href="/categories" class="btn btn-sm btn-outline-secondary" title="حذف فیلترها"><i class="bi bi-x-lg"></i></a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- گرید دسته‌بندی‌ها -->
+<div class="row g-3">
+    {% for cat in categories %}
+    {% set stat = category_stats.get(cat.id, {'count': 0, 'total_amount': 0}) %}
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100 p-3 position-relative overflow-hidden" 
+             style="background: #151d2c; border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; border-right: 4px solid {{ cat.color }};">
+            
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center justify-content-center rounded-3" 
+                         style="width: 44px; height: 44px; background: {{ cat.color }}22; color: {{ cat.color }}; border: 1px solid {{ cat.color }}55; font-size: 1.3rem;">
+                        <i class="bi bi-{{ cat.icon }}"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-1 text-white">{{ cat.title }}</h6>
+                        {% if cat.type == 'EXPENSE' %}
+                            <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);">
+                                <i class="bi bi-arrow-up-right me-1"></i>هزینه
+                            </span>
+                        {% elif cat.type == 'INCOME' %}
+                            <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #4ade80; border: 1px solid rgba(16, 185, 129, 0.3);">
+                                <i class="bi bi-arrow-down-left me-1"></i>درآمد
+                            </span>
+                        {% else %}
+                            <span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);">
+                                <i class="bi bi-arrow-left-right me-1"></i>مشترک
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-primary py-1 px-2" title="ویرایش" data-bs-toggle="modal" data-bs-target="#editCategoryModal{{ cat.id }}">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <form method="POST" action="/categories/{{ cat.id }}/delete" onsubmit="return confirm('آیا از حذف دسته‌بندی «{{ cat.title }}» اطمینان دارید؟ تراکنش‌های متصل به آن حذف نخواهند شد.');" class="d-inline m-0">
+                        <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2" title="حذف">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- جعبه آمار تراکنش‌های متصل -->
+            <div class="rounded-3 p-2 px-3 my-2 d-flex justify-content-between align-items-center" 
+                 style="background: #0f1523; border: 1px solid rgba(255,255,255,0.05);">
+                <div>
+                    <small class="text-secondary d-block" style="font-size: 0.75rem;">تعداد تراکنش‌ها</small>
+                    <span class="fw-bold latin-num text-light">{{ stat.count }} <small class="text-muted" style="font-size: 0.7rem;">مورد</small></span>
+                </div>
+                <div class="text-end">
+                    <small class="text-secondary d-block" style="font-size: 0.75rem;">مجموع گردش</small>
+                    <span class="fw-bold latin-num text-info">{{ stat.total_amount | rial }} <small class="text-muted" style="font-size: 0.7rem;">ریال</small></span>
+                </div>
+            </div>
+
+            {% if cat.description %}
+            <small class="text-muted d-block text-truncate mb-2" style="font-size: 0.78rem;" title="{{ cat.description }}">
+                {{ cat.description }}
+            </small>
+            {% endif %}
+
+            <!-- لینک سریع مشاهده تراکنش‌های این دسته‌بندی -->
+            <div class="pt-2 mt-auto border-top border-secondary border-opacity-10 d-flex justify-content-between align-items-center">
+                <a href="/transactions?category_filter={{ cat.id }}" class="text-primary text-decoration-none small">
+                    <i class="bi bi-journal-text me-1"></i>مشاهده تراکنش‌های این دسته
+                </a>
+                <span class="badge bg-dark text-muted" style="font-size: 0.7rem;">
+                    <i class="bi bi-circle-fill me-1" style="color: {{ cat.color }};"></i>{{ cat.icon }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- مودال ویرایش دسته‌بندی -->
+    <div class="modal fade" id="editCategoryModal{{ cat.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form method="POST" action="/categories/{{ cat.id }}/edit">
+                    <div class="modal-header">
+                        <h5 class="modal-title">ویرایش دسته‌بندی</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">عنوان دسته‌بندی *</label>
+                            <input type="text" name="title" value="{{ cat.title }}" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">نوع کاربری *</label>
+                            <select name="type" class="form-select" required>
+                                <option value="BOTH" {% if cat.type == 'BOTH' %}selected{% endif %}>مشترک (هم هزینه و هم درآمد)</option>
+                                <option value="EXPENSE" {% if cat.type == 'EXPENSE' %}selected{% endif %}>فقط هزینه (برداشت)</option>
+                                <option value="INCOME" {% if cat.type == 'INCOME' %}selected{% endif %}>فقط درآمد (واریز)</option>
+                            </select>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">رنگ مشخصه</label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="color" name="color" value="{{ cat.color }}" class="form-control form-control-color" style="width: 48px; height: 38px;">
+                                    <span class="small text-muted latin-num">{{ cat.color }}</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">آیکون نمادین</label>
+                                <select name="icon" class="form-select">
+                                    {% for icon_name, icon_label in popular_icons %}
+                                    <option value="{{ icon_name }}" {% if cat.icon == icon_name %}selected{% endif %}>
+                                        {{ icon_label }} ({{ icon_name }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">توضیحات تکمیلی</label>
+                            <textarea name="description" class="form-control" rows="2">{{ cat.description or '' }}</textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                        <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12 text-center py-5 text-muted">
+        <i class="bi bi-tags display-4 d-block mb-3 opacity-50"></i>
+        هیچ دسته‌بندی فعالی متناسب با فیلترها یافت نشد.
+    </div>
+    {% endfor %}
+</div>
+
+<!-- مودال ثبت دسته‌بندی جدید -->
+<div class="modal fade" id="newCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" action="/categories/create">
+                <div class="modal-header">
+                    <h5 class="modal-title">افزودن دسته‌بندی جدید</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">عنوان دسته‌بندی *</label>
+                        <input type="text" name="title" class="form-control" placeholder="مثال: خرید مواد اولیه، اجاره دفتر، فروش محصول" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">نوع کاربری *</label>
+                        <select name="type" class="form-select" required>
+                            <option value="EXPENSE">فقط هزینه (برداشت)</option>
+                            <option value="INCOME">فقط درآمد (واریز)</option>
+                            <option value="BOTH" selected>مشترک (هم هزینه و هم درآمد)</option>
+                        </select>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">رنگ مشخصه</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="color" name="color" value="#3b82f6" class="form-control form-control-color" style="width: 48px; height: 38px;">
+                                <span class="small text-muted">رنگ نشان</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">آیکون نمادین</label>
+                            <select name="icon" class="form-select">
+                                {% for icon_name, icon_label in popular_icons %}
+                                <option value="{{ icon_name }}" {% if icon_name == 'tag' %}selected{% endif %}>
+                                    {{ icon_label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">توضیحات اختیاری</label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="توضیحاتی برای شفاف‌سازی این سرفصل..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-primary">ثبت دسته‌بندی</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

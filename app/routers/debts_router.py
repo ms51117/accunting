@@ -1,10 +1,10 @@
 from datetime import datetime, date
-from typing import Optional
 
-import jdatetime
-from fastapi import APIRouter, Request, Depends, Form, responses, status
+from fastapi import APIRouter, Request, Depends, Form, status, HTTPException
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from starlette.responses import RedirectResponse
+
 from app.database import get_db
 from app.auth import get_current_user
 from app.models.account import Account
@@ -12,68 +12,46 @@ from app.models.person import Person
 from app.models.debt import Debt, DebtType, DebtStatus
 from app.models.transaction import Transaction, TransactionType
 from app.models.user import User
-from app.utils.jalali import parse_jalali_str
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
-from fastapi.responses import RedirectResponse
-from app.utils.parse_amount import parse_int_amount
-
-
+from app.services.category_service import get_or_create_category
+from app.utils.jalali import parse_jalali_str, format_rial, to_jalali_str
+from app.utils.parse_amount import parse_int_amount, parse_optional_int
 
 router = APIRouter(prefix="/debts", tags=["Debts"], dependencies=[Depends(get_current_user)])
 templates = Jinja2Templates(directory="app/templates")
-def format_rial(value):
-    if value is None:
-        return "0"
-    try:
-        return f"{int(value):,}"
-    except (ValueError, TypeError):
-        return str(value)
 
-def format_jalali(value):
-    if not value:
-        return "-"
-    try:
-        if isinstance(value, str):
-            # اگر ورودی رشته است، اول به آبجکت تاریخ میلادی تبدیل شود
-            from datetime import datetime
-            value = datetime.strptime(value, "%Y-%m-%d").date()
-        # تبدیل میلادی به شمسی
-        j_date = jdatetime.date.fromgregorian(date=value)
-        return j_date.strftime("%Y/%m/%d")
-    except Exception:
-        return str(value)
-
-# ۳. ثبت فیلترها روی محیط Jinja2
 templates.env.filters["rial"] = format_rial
-templates.env.filters["jalali"] = format_jalali
+templates.env.filters["jalali"] = to_jalali_str
 
-def parse_date_input(date_str: str):
+
+def parse_date_input(date_str: str) -> date:
     if not date_str or not date_str.strip():
-        return None
+        return date.today()
     date_str = date_str.strip()
     try:
         if "/" in date_str:
-            parts = [int(p) for p in date_str.split("/")]
-            if len(parts) == 3:
-                return jdatetime.date(parts[0], parts[1], parts[2]).togregorian()
-        elif "-" in date_str:
-            return datetime.strptime(date_str, "%Y-%m-%d").date()
+            return parse_jalali_str(date_str)
+        return datetime.strptime(date_str, "%Y-%m-%d").date()
     except Exception:
-        return None
-    return None
+        return date.today()
 
+
+@router.get("")
 @router.get("/")
 def debts_list(
-        request: Request,
-        db: Session = Depends(get_db),
-        current_user: User = Depends(get_current_user),
-        type: str = None,
-        status: str = "ACTIVE"
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    type: str = None,
+    status: str = "ACTIVE"
 ):
     query = db.query(Debt).filter(Debt.user_id == current_user.id)
-    if type:
+
+    if not status:
+        status = "ACTIVE"
+
+    if type and type != "ALL":
         query = query.filter(Debt.type == type)
-    if status and status != "ALL":
+    if status != "ALL":
         query = query.filter(Debt.status == status)
 
     debts = query.order_by(Debt.id.desc()).all()
@@ -82,174 +60,120 @@ def debts_list(
     return templates.TemplateResponse(
         request=request,
         name="debts/list.html",
-        context= {
+        context={
             "debts": debts,
             "persons": persons,
             "accounts": accounts,
             "selected_type": type,
             "selected_status": status,
             "user": current_user
-        })
+        }
+    )
+
 
 @router.post("/create")
 def create_debt(
     type: str = Form(...),
-    person_id: int = Form(...),
-    amount: int = Form(...),
-    account_id: int = Form(None),  # حساب مبدا/مقصد
+    person_id: str = Form(...),
+    amount: str = Form(...),
+    account_id: str = Form(None),
     date: str = Form(None),
     description: str = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
-
 ):
-    if amount <= 0:
-        return RedirectResponse(url="/debts?error=invalid_amount", status_code=status.HTTP_303_SEE_OTHER)
+    clean_amount = parse_int_amount(amount)
+    if clean_amount <= 0:
+        return RedirectResponse(url="/debts?error=مبلغ_نامعتبر_است", status_code=status.HTTP_303_SEE_OTHER)
 
-    person = db.query(Person).filter(Person.id == person_id, Person.user_id == current_user.id).first()
+    clean_person_id = parse_optional_int(person_id)
+    if not clean_person_id:
+        return RedirectResponse(url="/debts?error=شخص_یافت_نشد", status_code=status.HTTP_303_SEE_OTHER)
+
+    person = db.query(Person).filter(Person.id == clean_person_id, Person.user_id == current_user.id).first()
     if not person:
-        return RedirectResponse(url="/debts?error=person_not_found", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url="/debts?error=شخص_یافت_نشد", status_code=status.HTTP_303_SEE_OTHER)
 
-    trans_date = parse_date_input(date) or datetime.now().date()
+    trans_date = parse_date_input(date)
 
     # ایجاد رکورد بدهی/طلب
     new_debt = Debt(
         user_id=current_user.id,
         type=type,
-        person_id=person_id,
-        amount=amount,
+        person_id=person.id,
+        amount=clean_amount,
         paid_amount=0,
         due_date=trans_date,
-        description=description,
+        description=description.strip() if description else None,
         status=DebtStatus.ACTIVE.value
     )
     db.add(new_debt)
-    db.flush()  # دریافت شناسه new_debt.id
+    db.flush()
 
-    # اگر حسابی انتخاب شده باشد، تراکنش متناظر را ثبت می‌کنیم
-    if account_id:
-        account = db.query(Account).filter(Account.id == account_id, Account.user_id == current_user.id).with_for_update().first()
+    # اگر حسابی انتخاب شده باشد، تراکنش اولیه متناظر ثبت می‌شود
+    clean_account_id = parse_optional_int(account_id)
+    if clean_account_id:
+        account = (
+            db.query(Account)
+            .filter(Account.id == clean_account_id, Account.user_id == current_user.id)
+            .with_for_update()
+            .first()
+        )
         if not account:
             db.rollback()
-            return RedirectResponse(url="/debts?error=account_not_found", status_code=status.HTTP_303_SEE_OTHER)
+            return RedirectResponse(url="/debts?error=حساب_یافت_نشد", status_code=status.HTTP_303_SEE_OTHER)
 
         if type == DebtType.RECEIVABLE.value:
             # طلبکاری (ما پول قرض دادیم): پول از حساب کسر می‌شود
-            if account.balance < amount:
+            if account.balance < clean_amount:
                 db.rollback()
-                return RedirectResponse(url="/debts?error=insufficient_funds", status_code=status.HTTP_303_SEE_OTHER)
-            account.balance -= amount
+                return RedirectResponse(url="/debts?error=موجودی_حساب_کافی_نیست", status_code=status.HTTP_303_SEE_OTHER)
+            account.balance -= clean_amount
             tx_type = TransactionType.EXPENSE.value
             tx_cat = "پرداخت قرض/وام"
         else:
             # بدهکاری (ما پول قرض گرفتیم): پول به حساب واریز می‌شود
-            account.balance += amount
+            account.balance += clean_amount
             tx_type = TransactionType.INCOME.value
             tx_cat = "دریافت قرض/وام"
 
         tx_desc = f"{tx_cat} به/از {person.full_name}"
         if description:
-            tx_desc += f" - {description}"
+            tx_desc += f" - {description.strip()}"
+
+        debt_cat = get_or_create_category(db, user_id=current_user.id, title=tx_cat, trans_type=tx_type)
 
         transaction = Transaction(
             user_id=current_user.id,
             account_id=account.id,
             type=tx_type,
             category=tx_cat,
-            amount=amount,
+            category_id=debt_cat.id,
+            amount=clean_amount,
             trans_date=trans_date,
             description=tx_desc,
-            debt_id=new_debt.id
+            debt_id=new_debt.id,
+            person_id=person.id
         )
         db.add(transaction)
 
     db.commit()
-    return RedirectResponse(url="/debts?success=debt_created", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url="/debts?msg=ثبت_با_موفقیت_انجام_شد", status_code=status.HTTP_303_SEE_OTHER)
+
 
 @router.post("/{debt_id}/pay")
 def pay_debt(
     debt_id: int,
     pay_amount: str = Form(...),
-    account_id: int = Form(...),
+    account_id: str = Form(...),
     description: str = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
-
 ):
-    pay_amount = parse_int_amount(pay_amount)
-    if pay_amount <= 0:
-        return RedirectResponse(url="/debts?error=invalid_pay_amount", status_code=status.HTTP_303_SEE_OTHER)
+    clean_pay_amount = parse_int_amount(pay_amount)
+    if clean_pay_amount <= 0:
+        return RedirectResponse(url="/debts?error=مبلغ_پرداختی_نامعتبر_است", status_code=status.HTTP_303_SEE_OTHER)
 
-    debt = db.query(Debt).filter(Debt.id == debt_id, Debt.user_id == current_user.id).with_for_update().first()
-    if not debt:
-        return RedirectResponse(url="/debts?error=debt_not_found", status_code=status.HTTP_303_SEE_OTHER)
-
-    remaining_balance = debt.amount - debt.paid_amount
-    if remaining_balance <= 0 or debt.status == DebtStatus.SETTLED.value:
-        return RedirectResponse(url="/debts?error=already_settled", status_code=status.HTTP_303_SEE_OTHER)
-
-    if pay_amount > remaining_balance:
-        return RedirectResponse(url="/debts?error=amount_exceeds_remaining", status_code=status.HTTP_303_SEE_OTHER)
-
-    account = db.query(Account).filter(Account.id == account_id, Account.user_id == current_user.id).with_for_update().first()
-    if not account:
-        return RedirectResponse(url="/debts?error=account_not_found", status_code=status.HTTP_303_SEE_OTHER)
-
-    debt.paid_amount += pay_amount
-    if debt.paid_amount >= debt.amount:
-        debt.status = DebtStatus.SETTLED.value
-
-    # ثبت تراکنش تسویه
-    if debt.type == DebtType.RECEIVABLE.value:
-        # وصول طلب: پول وارد حساب می‌شود
-        account.balance += pay_amount
-        tx_type = TransactionType.INCOME.value
-        tx_cat = "تسویه طلب"
-    else:
-        # پرداخت بدهی: پول از حساب کم می‌شود
-        if account.balance < pay_amount:
-            db.rollback()
-            return RedirectResponse(url="/debts?error=insufficient_funds", status_code=status.HTTP_303_SEE_OTHER)
-        account.balance -= pay_amount
-        tx_type = TransactionType.EXPENSE.value
-        tx_cat = "تسویه بدهی"
-
-    person_name = debt.person.full_name if debt.person else "شخص"
-    tx_desc = f"{tx_cat} ({person_name})"
-    if description:
-        tx_desc += f" - {description}"
-
-    transaction = Transaction(
-        user_id=current_user.id,
-        account_id=account.id,
-        type=tx_type,
-        category=tx_cat,
-        amount=pay_amount,
-        trans_date=datetime.now().date(),
-        description=tx_desc,
-        debt_id=debt.id
-    )
-    db.add(transaction)
-    db.commit()
-
-    return RedirectResponse(url="/debts?success=paid", status_code=status.HTTP_303_SEE_OTHER)
-
-
-# متد ویرایش بدهی (همگام با action فرم در list.html: /debts/{id}/update)
-@router.post("/{debt_id}/update")
-def update_debt(
-    debt_id: int,
-    person_id: int = Form(...),
-    amount: str = Form(...),
-    type: str = Form(...),
-    account_id: int = Form(None),
-    paid_amount: str = Form(None),  # 👈 امکان ویرایش مبلغ پرداخت/تسویه شده
-    due_date: str = Form(None),
-    description: str = Form(None),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    # ۱. واکشی بدهی با قفل سطری
     debt = (
         db.query(Debt)
         .filter(Debt.id == debt_id, Debt.user_id == current_user.id)
@@ -257,32 +181,114 @@ def update_debt(
         .first()
     )
     if not debt:
-        raise HTTPException(status_code=404, detail="رکورد بدهی/طلب یافت نشد")
+        return RedirectResponse(url="/debts?error=رکورد_یافت_نشد", status_code=status.HTTP_303_SEE_OTHER)
 
-    # ۲. تبدیل و اعتبارسنجی مبالغ
+    remaining_balance = debt.amount - debt.paid_amount
+    if remaining_balance <= 0 or debt.status == DebtStatus.SETTLED.value:
+        return RedirectResponse(url="/debts?error=این_مورد_قبلاً_تسویه_شده_است", status_code=status.HTTP_303_SEE_OTHER)
+
+    if clean_pay_amount > remaining_balance:
+        return RedirectResponse(url="/debts?error=مبلغ_پرداختی_بیشتر_از_مانده_است", status_code=status.HTTP_303_SEE_OTHER)
+
+    clean_account_id = parse_optional_int(account_id)
+    if not clean_account_id:
+        return RedirectResponse(url="/debts?error=حساب_یافت_نشد", status_code=status.HTTP_303_SEE_OTHER)
+
+    account = (
+        db.query(Account)
+        .filter(Account.id == clean_account_id, Account.user_id == current_user.id)
+        .with_for_update()
+        .first()
+    )
+    if not account:
+        return RedirectResponse(url="/debts?error=حساب_یافت_نشد", status_code=status.HTTP_303_SEE_OTHER)
+
+    debt.paid_amount += clean_pay_amount
+    if debt.paid_amount >= debt.amount:
+        debt.status = DebtStatus.SETTLED.value
+
+    # ثبت تراکنش تسویه
+    if debt.type == DebtType.RECEIVABLE.value:
+        # وصول طلب: پول وارد حساب می‌شود
+        account.balance += clean_pay_amount
+        tx_type = TransactionType.INCOME.value
+        tx_cat = "تسویه طلب"
+    else:
+        # پرداخت بدهی: پول از حساب کم می‌شود
+        if account.balance < clean_pay_amount:
+            db.rollback()
+            return RedirectResponse(url="/debts?error=موجودی_حساب_کافی_نیست", status_code=status.HTTP_303_SEE_OTHER)
+        account.balance -= clean_pay_amount
+        tx_type = TransactionType.EXPENSE.value
+        tx_cat = "تسویه بدهی"
+
+    person_name = debt.person.full_name if debt.person else "شخص"
+    tx_desc = f"{tx_cat} ({person_name})"
+    if description:
+        tx_desc += f" - {description.strip()}"
+
+    pay_cat = get_or_create_category(db, user_id=current_user.id, title=tx_cat, trans_type=tx_type)
+
+    transaction = Transaction(
+        user_id=current_user.id,
+        account_id=account.id,
+        type=tx_type,
+        category=tx_cat,
+        category_id=pay_cat.id,
+        amount=clean_pay_amount,
+        trans_date=date.today(),
+        description=tx_desc,
+        debt_id=debt.id,
+        person_id=debt.person_id
+    )
+    db.add(transaction)
+    db.commit()
+
+    return RedirectResponse(url="/debts?msg=تسویه_با_موفقیت_ثبت_شد", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/{debt_id}/update")
+def update_debt(
+    debt_id: int,
+    person_id: str = Form(...),
+    amount: str = Form(...),
+    type: str = Form(...),
+    account_id: str = Form(None),
+    paid_amount: str = Form(None),
+    due_date: str = Form(None),
+    description: str = Form(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    debt = (
+        db.query(Debt)
+        .filter(Debt.id == debt_id, Debt.user_id == current_user.id)
+        .with_for_update()
+        .first()
+    )
+    if not debt:
+        return RedirectResponse(url="/debts?error=not_found", status_code=303)
+
+    clean_person_id = parse_optional_int(person_id)
+    if clean_person_id:
+        debt.person_id = clean_person_id
+
     new_total_amount = parse_int_amount(amount)
     if new_total_amount <= 0:
-        return RedirectResponse(
-            url="/debts?error=مبلغ_کل_نامعتبر_است", status_code=303
-        )
+        return RedirectResponse(url="/debts?error=مبلغ_کل_نامعتبر_است", status_code=303)
 
-    # اگر فیلد پرداختی پر نشده بود، همان مقدار قبلی بدهی حفظ می‌شود
     if paid_amount is not None and paid_amount.strip() != "":
         new_paid_amount = parse_int_amount(paid_amount)
     else:
         new_paid_amount = debt.paid_amount
 
     if new_paid_amount < 0:
-        return RedirectResponse(
-            url="/debts?error=مبلغ_پرداختی_نامعتبر_است", status_code=303
-        )
+        return RedirectResponse(url="/debts?error=مبلغ_پرداختی_نامعتبر_است", status_code=303)
 
     if new_paid_amount > new_total_amount:
-        return RedirectResponse(
-            url="/debts?error=مبلغ_پرداختی_بیشتر_از_کل_است", status_code=303
-        )
+        return RedirectResponse(url="/debts?error=مبلغ_پرداختی_بیشتر_از_کل_است", status_code=303)
 
-    # ==================== بخش اضافه شده: همگام‌سازی مبلغ کل و تراکنش اولیه ====================
+    # همگام‌سازی مبلغ کل و تراکنش اولیه فقط در صورتی که تراکنش اولیه از نوع پرداخت/دریافت اولیه باشد
     total_diff = new_total_amount - debt.amount
     if total_diff != 0:
         initial_tx = (
@@ -290,6 +296,7 @@ def update_debt(
             .filter(
                 Transaction.debt_id == debt.id,
                 Transaction.user_id == current_user.id,
+                Transaction.category.in_(["پرداخت قرض/وام", "دریافت قرض/وام"])
             )
             .order_by(Transaction.id.asc())
             .first()
@@ -312,115 +319,55 @@ def update_debt(
                     init_account.balance += total_diff
 
             initial_tx.amount = new_total_amount
-    # =========================================================================================
 
-    # ۳. محاسبه اختلاف مبلغ پرداختی و اعمال روی حساب و تراکنش‌ها
-    diff = new_paid_amount - debt.paid_amount
-
-    if diff != 0:
-        # انتخاب حساب بانکی (حساب ارسالی فرم یا حساب متصل به آخرین تراکنش بدهی)
-        target_account_id = account_id
-        if not target_account_id:
-            last_tx = (
-                db.query(Transaction)
-                .filter(
-                    Transaction.debt_id == debt.id,
-                    Transaction.user_id == current_user.id,
-                )
-                .order_by(Transaction.id.desc())
-                .first()
-            )
-            if last_tx:
-                target_account_id = last_tx.account_id
-
-        if target_account_id:
-            account = (
-                db.query(Account)
-                .filter(
-                    Account.id == target_account_id,
-                    Account.user_id == current_user.id,
-                )
-                .with_for_update()
-                .first()
-            )
-
-            if account:
-                debt_type_val = debt.type.value if hasattr(debt.type, "value") else debt.type
-                # اگر نوع طلب (RECEIVABLE) باشد:
-                # افزایش پرداختی = واریز پول به حساب (INCOME) / کاهش پرداختی = کسر از حساب
-                if debt_type_val == "RECEIVABLE":
-                    account.balance += diff
-                    tx_type = (
-                        TransactionType.INCOME
-                        if diff > 0
-                        else TransactionType.EXPENSE
-                    )
-                    tx_desc = f"اصلاحیه تسویه طلب ({debt.id}) - تغییر مبلغ: {abs(diff):,} ریال"
-                else:
-                    # اگر نوع بدهی ما (PAYABLE) باشد:
-                    # افزایش پرداختی = برداشت از حساب (EXPENSE) / کاهش پرداختی = بازگشت پول به حساب
-                    if diff > 0 and account.balance < diff:
-                        return RedirectResponse(
-                            url="/debts?error=موجودی_حساب_کافی_نیست",
-                            status_code=303,
-                        )
-                    account.balance -= diff
-                    tx_type = (
-                        TransactionType.EXPENSE
-                        if diff > 0
-                        else TransactionType.INCOME
-                    )
-                    tx_desc = f"اصلاحیه پرداخت بدهی ({debt.id}) - تغییر مبلغ: {abs(diff):,} ریال"
-
-                # ثبت تراکنش تعدیلی برای حفظ تاریخچه مالی
-                adjustment_tx = Transaction(
-                    user_id=current_user.id,
-                    account_id=account.id,
-                    type=tx_type,
-                    category="اصلاحیه بدهی/طلب",
-                    amount=abs(diff),
-                    trans_date=datetime.now(),
-                    description=tx_desc,
-                    debt_id=debt.id,
-                )
-                db.add(adjustment_tx)
-
-    # ۴. به‌روزرسانی اطلاعات اصلی بدهی
+    # به‌روزرسانی اطلاعات اصلی بدهی
     debt.person_id = person_id
     debt.type = type
     debt.amount = new_total_amount
     debt.paid_amount = new_paid_amount
-    debt.description = description
+    debt.description = description.strip() if description else None
 
     if due_date:
         debt.due_date = parse_date_input(due_date)
     else:
         debt.due_date = None
 
-    # ۵. به‌روزرسانی خودکار وضعیت (ACTIVE یا SETTLED)
     if debt.paid_amount >= debt.amount:
-        debt.status = DebtStatus.SETTLED
+        debt.status = DebtStatus.SETTLED.value
     else:
-        debt.status = DebtStatus.ACTIVE
+        debt.status = DebtStatus.ACTIVE.value
 
     db.commit()
-    return RedirectResponse(url="/debts?success=updated", status_code=303)
-
+    return RedirectResponse(url="/debts?msg=تغییرات_با_موفقیت_ذخیره_شد", status_code=303)
 
 
 @router.post("/{debt_id}/delete")
-def delete_debt(debt_id: int, db: Session = Depends(get_db),current_user: User = Depends(get_current_user)
+def delete_debt(
+    debt_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    debt = db.query(Debt).filter(Debt.id == debt_id, Debt.user_id == current_user.id).first()
+    debt = (
+        db.query(Debt)
+        .filter(Debt.id == debt_id, Debt.user_id == current_user.id)
+        .first()
+    )
     if not debt:
         return RedirectResponse(url="/debts?error=not_found", status_code=status.HTTP_303_SEE_OTHER)
 
-    # 1. واکشی کلیه تراکنش‌های متصل به این بدهی
-    transactions = db.query(Transaction).filter(Transaction.debt_id == debt.id,Transaction.user_id == current_user.id).all()
+    transactions = (
+        db.query(Transaction)
+        .filter(Transaction.debt_id == debt.id, Transaction.user_id == current_user.id)
+        .all()
+    )
 
-    # 2. برگرداندن (Revert) اثر تراکنش‌ها از مانده حساب‌ها
     for tx in transactions:
-        account = db.query(Account).filter(Account.id == tx.account_id, Account.user_id == current_user.id).with_for_update().first()
+        account = (
+            db.query(Account)
+            .filter(Account.id == tx.account_id, Account.user_id == current_user.id)
+            .with_for_update()
+            .first()
+        )
         if account:
             if tx.type == TransactionType.INCOME.value:
                 account.balance -= tx.amount
@@ -428,8 +375,6 @@ def delete_debt(debt_id: int, db: Session = Depends(get_db),current_user: User =
                 account.balance += tx.amount
         db.delete(tx)
 
-    # 3. حذف رکورد بدهی
     db.delete(debt)
     db.commit()
-
-    return RedirectResponse(url="/debts?success=deleted", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url="/debts?msg=مورد_با_موفقیت_حذف_شد", status_code=status.HTTP_303_SEE_OTHER)

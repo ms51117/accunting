@@ -1,0 +1,699 @@
+{% extends "base.html" %}
+{% block title %}گزارش‌ها و تحلیل مالی پیشرفته{% endblock %}
+
+{% block content %}
+<style>
+    /* استایل اختصاصی جهت بهینه‌سازی چاپ و خروجی PDF */
+    @media print {
+        body {
+            background: #ffffff !important;
+            color: #000000 !important;
+        }
+        .main-dock, .mobile-dock, .no-print, form, .btn, .card-header .btn {
+            display: none !important;
+        }
+        .main-content {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .card {
+            background: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #000000 !important;
+            box-shadow: none !important;
+            break-inside: avoid;
+        }
+        .text-white, .text-light {
+            color: #0f172a !important;
+        }
+        .text-muted, .text-secondary {
+            color: #475569 !important;
+        }
+        .table {
+            color: #000000 !important;
+            border-color: #cbd5e1 !important;
+        }
+        .table-light {
+            background-color: #f1f5f9 !important;
+            color: #0f172a !important;
+        }
+        .badge {
+            border: 1px solid #64748b !important;
+            color: #000 !important;
+        }
+    }
+</style>
+
+<!-- نوار هدر و دکمه‌های عملیاتی -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4 no-print">
+    <div>
+        <div class="d-flex align-items-center gap-2">
+            <div class="dock-brand m-0" style="width: 42px; height: 42px; font-size: 1.25rem;">
+                <i class="bi bi-pie-chart-fill text-primary"></i>
+            </div>
+            <div>
+                <h4 class="fw-bold mb-0 text-white">مرکز گزارش‌گیری و هوش مالی</h4>
+                <small class="text-secondary">تحلیل آماری، روند ماهانه گردش وجوه و تراز عملکرد مالی</small>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <button onclick="window.print()" class="btn btn-outline-light py-2 px-3 d-flex align-items-center gap-2">
+            <i class="bi bi-printer-fill text-info"></i>
+            <span>چاپ گزارش (PDF)</span>
+        </button>
+        <a href="/reports/export-csv?period={{ selected_period }}&custom_from={{ custom_from }}&custom_to={{ custom_to }}&account_id={{ selected_account_id or '' }}&category_id={{ selected_category_id or '' }}&trans_type={{ selected_trans_type }}" class="btn btn-success py-2 px-3 d-flex align-items-center gap-2">
+            <i class="bi bi-file-earmark-excel-fill"></i>
+            <span>خروجی اکسل (CSV)</span>
+        </a>
+    </div>
+</div>
+
+<!-- پنل فیلتر پیشرفته گزارش -->
+<div class="card mb-4 no-print" style="border: 1px solid rgba(59, 130, 246, 0.25);">
+    <div class="card-header d-flex justify-content-between align-items-center py-2 px-3" style="background: rgba(59, 130, 246, 0.08);">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-funnel-fill text-primary"></i>
+            <span class="fw-bold text-white small">فیلترهای گزارش‌گیری</span>
+            <span class="badge bg-primary-subtle text-primary border border-primary ms-2">{{ report.period_title }}</span>
+        </div>
+        <a href="/reports" class="btn btn-sm btn-link text-secondary text-decoration-none p-0" style="font-size: 0.8rem;">
+            <i class="bi bi-arrow-counterclockwise me-1"></i>بازنشانی فیلترها
+        </a>
+    </div>
+
+    <div class="card-body p-3">
+        <form method="GET" action="/reports" class="row g-2 align-items-end" id="filterForm">
+            <!-- بازه زمانی -->
+            <div class="col-6 col-md-3">
+                <label class="form-label small text-secondary fw-semibold mb-1">بازه زمانی</label>
+                <select name="period" class="form-select form-select-sm" id="periodSelect" onchange="toggleCustomDates()">
+                    <option value="current_month" {% if selected_period == 'current_month' %}selected{% endif %}>ماه جاری شمسی</option>
+                    <option value="last_3_months" {% if selected_period == 'last_3_months' %}selected{% endif %}>۳ ماه اخیر</option>
+                    <option value="last_6_months" {% if selected_period == 'last_6_months' %}selected{% endif %}>۶ ماه اخیر</option>
+                    <option value="current_year" {% if selected_period == 'current_year' %}selected{% endif %}>سال جاری (۱۴۰x)</option>
+                    <option value="custom" {% if selected_period == 'custom' %}selected{% endif %}>بازه دلخواه تاریخ</option>
+                    <option value="all" {% if selected_period == 'all' %}selected{% endif %}>تمام دوران (کلی)</option>
+                </select>
+            </div>
+
+            <!-- تاریخ از -->
+            <div class="col-6 col-md-2" id="customFromCol" style="{% if selected_period != 'custom' %}display: none;{% endif %}">
+                <label class="form-label small text-secondary fw-semibold mb-1">از تاریخ (شمسی)</label>
+                <input type="text" name="custom_from" class="form-control form-select-sm" value="{{ custom_from }}" placeholder="۱۴۰x/xx/xx" data-jdp autocomplete="off">
+            </div>
+
+            <!-- تاریخ تا -->
+            <div class="col-6 col-md-2" id="customToCol" style="{% if selected_period != 'custom' %}display: none;{% endif %}">
+                <label class="form-label small text-secondary fw-semibold mb-1">تا تاریخ (شمسی)</label>
+                <input type="text" name="custom_to" class="form-control form-select-sm" value="{{ custom_to }}" placeholder="۱۴۰x/xx/xx" data-jdp autocomplete="off">
+            </div>
+
+            <!-- نوع تراکنش -->
+            <div class="col-6 col-md-2">
+                <label class="form-label small text-secondary fw-semibold mb-1">نوع گردش</label>
+                <select name="trans_type" class="form-select form-select-sm">
+                    <option value="ALL" {% if selected_trans_type == 'ALL' %}selected{% endif %}>همه انواع</option>
+                    <option value="INCOME" {% if selected_trans_type == 'INCOME' %}selected{% endif %}>فقط درآمدها</option>
+                    <option value="EXPENSE" {% if selected_trans_type == 'EXPENSE' %}selected{% endif %}>فقط هزینه‌ها</option>
+                    <option value="TRANSFER" {% if selected_trans_type == 'TRANSFER' %}selected{% endif %}>انتقالات بین‌بانکی</option>
+                </select>
+            </div>
+
+            <!-- سرفصل دسته‌بندی -->
+            <div class="col-6 col-md-2">
+                <label class="form-label small text-secondary fw-semibold mb-1">دسته‌بندی</label>
+                <select name="category_id" class="form-select form-select-sm">
+                    <option value="">همه دسته‌بندی‌ها</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if selected_category_id == cat.id %}selected{% endif %}>{{ cat.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- حساب مالی -->
+            <div class="col-6 col-md-2">
+                <label class="form-label small text-secondary fw-semibold mb-1">حساب / بانک</label>
+                <select name="account_id" class="form-select form-select-sm">
+                    <option value="">همه حساب‌ها</option>
+                    {% for acc in accounts %}
+                    <option value="{{ acc.id }}" {% if selected_account_id == acc.id %}selected{% endif %}>{{ acc.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- دکمه اعمال -->
+            <div class="col-12 col-md-1">
+                <button type="submit" class="btn btn-primary btn-sm w-100 py-1">
+                    <i class="bi bi-search me-1"></i>اعمال
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- شاخص‌های کلیدی عملکرد مالی در این دوره (KPI Cards) -->
+<div class="row g-3 mb-4">
+    <!-- درآمد کل دوره -->
+    <div class="col-6 col-lg-3">
+        <div class="card p-3 h-100" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, #111c2e 100%); border-top: 3px solid #10b981;">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <span class="text-secondary small fw-medium">درآمد کل دوره</span>
+                    <h4 class="fw-bold text-success mt-2 mb-0 latin-num">{{ report.total_income | rial }} <small class="fs-7 text-muted">ریال</small></h4>
+                </div>
+                <div class="p-2 rounded-3" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">
+                    <i class="bi bi-arrow-down-left fs-5"></i>
+                </div>
+            </div>
+            <div class="small text-muted pt-2 border-top border-secondary border-opacity-10 d-flex justify-content-between">
+                <span>تعداد دریافت:</span>
+                <span class="latin-num text-white">{{ report.income_breakdown.transaction_count }} تراکنش</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- هزینه کل دوره -->
+    <div class="col-6 col-lg-3">
+        <div class="card p-3 h-100" style="background: linear-gradient(135deg, rgba(244, 63, 94, 0.12) 0%, #111c2e 100%); border-top: 3px solid #f43f5e;">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <span class="text-secondary small fw-medium">هزینه کل دوره</span>
+                    <h4 class="fw-bold text-danger mt-2 mb-0 latin-num">{{ report.total_expense | rial }} <small class="fs-7 text-muted">ریال</small></h4>
+                </div>
+                <div class="p-2 rounded-3" style="background: rgba(244, 63, 94, 0.2); color: #f43f5e;">
+                    <i class="bi bi-arrow-up-right fs-5"></i>
+                </div>
+            </div>
+            <div class="small text-muted pt-2 border-top border-secondary border-opacity-10 d-flex justify-content-between">
+                <span>تعداد مخارج:</span>
+                <span class="latin-num text-white">{{ report.expense_breakdown.transaction_count }} تراکنش</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- تراز نهایی دوره (سود/زیان خالص) -->
+    <div class="col-6 col-lg-3">
+        <div class="card p-3 h-100" style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, #111c2e 100%); border-top: 3px solid #38bdf8;">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <span class="text-secondary small fw-medium">تراز خالص نقدینگی</span>
+                    <h4 class="fw-bold {% if report.net_savings >= 0 %}text-info{% else %}text-warning{% endif %} mt-2 mb-0 latin-num">
+                        {{ report.net_savings | rial }} <small class="fs-7 text-muted">ریال</small>
+                    </h4>
+                </div>
+                <div class="p-2 rounded-3" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">
+                    <i class="bi bi-wallet2 fs-5"></i>
+                </div>
+            </div>
+            <div class="small text-muted pt-2 border-top border-secondary border-opacity-10 d-flex justify-content-between">
+                <span>نرخ پس‌انداز:</span>
+                <span class="latin-num fw-bold {% if report.savings_rate >= 0 %}text-success{% else %}text-danger{% endif %}">{{ report.savings_rate }}%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- میانگین هزینه روزانه -->
+    <div class="col-6 col-lg-3">
+        <div class="card p-3 h-100" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, #111c2e 100%); border-top: 3px solid #f59e0b;">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <span class="text-secondary small fw-medium">میانگین هزینه روزانه</span>
+                    <h4 class="fw-bold text-warning mt-2 mb-0 latin-num">{{ report.daily_avg_expense | rial }} <small class="fs-7 text-muted">ریال</small></h4>
+                </div>
+                <div class="p-2 rounded-3" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">
+                    <i class="bi bi-calendar2-day fs-5"></i>
+                </div>
+            </div>
+            <div class="small text-muted pt-2 border-top border-secondary border-opacity-10 d-flex justify-content-between">
+                <span>بازه محاسبه:</span>
+                <span class="latin-num text-white">{{ report.days_count }} روز</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ردیف نمودارهای تحلیلی حرفه‌ای (Chart.js) -->
+<div class="row g-4 mb-4">
+    <!-- نمودار مقایسه‌ای روند ماهانه (میله‌ای و خطی) -->
+    <div class="col-12 col-lg-8">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-bar-chart-line-fill text-primary fs-5"></i>
+                    <div>
+                        <h5 class="card-title fw-bold mb-0">نمودار روند گردش مالی ماهانه</h5>
+                        <small class="text-muted" style="font-size: 0.76rem;">مقایسه درآمد، مخارج و مازاد نقدینگی در ۶ ماه اخیر</small>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-3">
+                <div class="position-relative" style="height: 300px; width: 100%;">
+                    <canvas id="reportTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نمودار دونات توزیع هزینه‌ها برحسب دسته‌بندی -->
+    <div class="col-12 col-lg-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-pie-chart-fill text-warning fs-5"></i>
+                    <div>
+                        <h5 class="card-title fw-bold mb-0">سهم دسته‌بندی هزینه‌ها</h5>
+                        <small class="text-muted" style="font-size: 0.76rem;">درصد توزیع مخارج در این بازه</small>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-3 d-flex flex-column justify-content-center align-items-center">
+                {% if report.expense_breakdown.categories %}
+                <div class="position-relative mb-3" style="height: 220px; width: 220px; max-width: 100%;">
+                    <canvas id="reportExpenseDonut"></canvas>
+                </div>
+                <div class="w-100 small text-center text-muted border-top border-secondary border-opacity-10 pt-2">
+                    مجموع هزینه‌های دسته‌بندی شده: <span class="latin-num fw-bold text-white">{{ report.expense_breakdown.total_sum | rial }}</span> ریال
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                    <span>هیچ هزینه‌ای در این بازه زمانی ثبت نشده است.</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ردیف جدول‌های تحلیلی سرفصل‌ها و گردش حساب‌ها -->
+<div class="row g-4 mb-4">
+    <!-- جدول تفکیک هزینه‌ها برحسب سرفصل -->
+    <div class="col-12 col-lg-7">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-tags-fill text-danger fs-5"></i>
+                    <h5 class="card-title fw-bold mb-0">تفکیک مخارج به سرفصل‌های هزینه</h5>
+                </div>
+                <span class="badge bg-secondary-subtle text-light border">
+                    {{ report.expense_breakdown.categories | length }} سرفصل فعال
+                </span>
+            </div>
+            <div class="card-body p-0">
+                {% if report.expense_breakdown.categories %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-end ps-3">عنوان سرفصل</th>
+                                <th>تعداد</th>
+                                <th>کل مبلغ (ریال)</th>
+                                <th style="width: 35%;">درصد سهم از کل مخارج</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cat in report.expense_breakdown.categories %}
+                            <tr>
+                                <td class="text-end ps-3 fw-semibold">
+                                    <i class="bi bi-circle-fill me-2" style="color: {{ cat.color }}; font-size: 0.75rem;"></i>
+                                    <span class="text-white">{{ cat.title }}</span>
+                                </td>
+                                <td><span class="latin-num text-muted">{{ cat.count }}</span></td>
+                                <td>
+                                    <span class="fw-bold latin-num text-danger">{{ cat.amount | rial }}</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress flex-grow-1" style="height: 6px; background: rgba(255,255,255,0.08);">
+                                            <div class="progress-bar" role="progressbar" style="width: {{ cat.percent }}%; background-color: {{ cat.color }};" aria-valuenow="{{ cat.percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                        <span class="latin-num small text-muted" style="min-width: 45px;">{{ cat.percent }}%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-4 text-center text-muted">
+                    سرفصلی برای نمایش وجود ندارد.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- جدول گردش و مانده حساب‌ها در دوره -->
+    <div class="col-12 col-lg-5">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-bank2 text-info fs-5"></i>
+                    <h5 class="card-title fw-bold mb-0">گردش حساب‌ها در این دوره</h5>
+                </div>
+                <a href="/accounts" class="btn btn-sm btn-outline-light py-0 px-2 no-print" style="font-size: 0.78rem;">
+                    مدیریت حساب‌ها
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% if report.account_stats %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-end ps-3">نام حساب</th>
+                                <th class="text-success">ورودی</th>
+                                <th class="text-danger">خروجی</th>
+                                <th>مانده فعلی</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for acc in report.account_stats %}
+                            <tr>
+                                <td class="text-end ps-3 fw-semibold text-white">
+                                    <i class="bi bi-wallet2 me-1 text-primary opacity-75"></i>{{ acc.account.title }}
+                                </td>
+                                <td>
+                                    <span class="latin-num text-success fw-bold small">{{ acc.inflow | rial }}</span>
+                                </td>
+                                <td>
+                                    <span class="latin-num text-danger fw-bold small">{{ acc.outflow | rial }}</span>
+                                </td>
+                                <td>
+                                    <span class="latin-num text-info fw-bold small">{{ acc.balance | rial }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-4 text-center text-muted">
+                    حسابی در این بازه گردش مالی نداشته است.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- دفتر ریز تراکنش‌های ثبت‌شده در این بازه فیلتر -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-journal-text text-primary fs-5"></i>
+            <div>
+                <h5 class="card-title fw-bold mb-0">دفتر ریز تراکنش‌های دوره</h5>
+                <small class="text-muted" style="font-size: 0.76rem;">فهرست جزئیات پرداخت‌ها، دریافت‌ها و انتقالات فیلترشده</small>
+            </div>
+        </div>
+        <span class="badge bg-primary-subtle text-primary border border-primary">
+            تعداد: <span class="latin-num fw-bold">{{ report.transactions | length }}</span> ردیف
+        </span>
+    </div>
+
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 text-center">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 50px;">ردیف</th>
+                        <th>تاریخ</th>
+                        <th>نوع</th>
+                        <th>دسته‌بندی</th>
+                        <th>حساب بانکی</th>
+                        <th>طرف‌حساب</th>
+                        <th class="text-end">توضیحات</th>
+                        <th>مبلغ (ریال)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tr in report.transactions %}
+                    <tr>
+                        <td class="text-muted small latin-num">{{ loop.index }}</td>
+                        <td>
+                            <span class="latin-num small">{{ tr.trans_date | jalali }}</span>
+                        </td>
+                        <td>
+                            {% if tr.type == 'INCOME' %}
+                                <span class="tag-dot lime">درآمد</span>
+                            {% elif tr.type == 'EXPENSE' %}
+                                <span class="tag-dot orange">هزینه</span>
+                            {% else %}
+                                <span class="tag-dot blue">انتقال</span>
+                            {% endif %}
+                        </td>
+                        <td class="fw-semibold">
+                            {% if tr.category_rel %}
+                            <span class="badge" style="background: {{ tr.category_rel.color }}22; color: {{ tr.category_rel.color }}; border: 1px solid {{ tr.category_rel.color }}55; font-size: 0.82rem;">
+                                <i class="bi bi-{{ tr.category_rel.icon }} me-1"></i>{{ tr.category_rel.title }}
+                            </span>
+                            {% else %}
+                            {{ tr.category or '-' }}
+                            {% endif %}
+                        </td>
+                        <td class="text-secondary small">{{ tr.account.title if tr.account else '-' }}</td>
+                        <td class="small">{{ tr.person.full_name if tr.person else '-' }}</td>
+                        <td class="text-end small text-secondary" style="max-width: 250px;">
+                            {{ tr.description or '-' }}
+                        </td>
+                        <td>
+                            <span class="fw-bold latin-num fs-6 {% if tr.type == 'INCOME' %}text-success{% elif tr.type == 'EXPENSE' %}text-danger{% else %}text-info{% endif %}">
+                                {{ tr.amount | rial }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="bi bi-search fs-2 d-block mb-2"></i>
+                            تراکنشی مطابق با فیلترهای انتخابی یافت نشد.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% if report.transactions %}
+                <tfoot class="table-light">
+                    <tr>
+                        <td colspan="7" class="text-end fw-bold ps-4">جمع مبالغ فیلترشده در این گزارش:</td>
+                        <td>
+                            <span class="fw-bold latin-num text-white fs-6">
+                                {% if selected_trans_type == 'INCOME' %}
+                                    <span class="text-success">{{ report.total_income | rial }}</span>
+                                {% elif selected_trans_type == 'EXPENSE' %}
+                                    <span class="text-danger">{{ report.total_expense | rial }}</span>
+                                {% else %}
+                                    <span class="{% if report.net_savings >= 0 %}text-info{% else %}text-warning{% endif %}">
+                                        تراز: {{ report.net_savings | rial }}
+                                    </span>
+                                {% endif %}
+                                <small class="text-muted">ریال</small>
+                            </span>
+                        </td>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- اسکریپت‌های گزارش‌گیری و نمودارهای تحلیلی -->
+<script>
+function toggleCustomDates() {
+    const sel = document.getElementById("periodSelect").value;
+    const fromCol = document.getElementById("customFromCol");
+    const toCol = document.getElementById("customToCol");
+    if (sel === "custom") {
+        fromCol.style.display = "block";
+        toCol.style.display = "block";
+    } else {
+        fromCol.style.display = "none";
+        toCol.style.display = "none";
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    if (typeof Chart === "undefined") {
+        console.warn("Chart.js بارگذاری نشده است.");
+        return;
+    }
+
+    Chart.defaults.font.family = "'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    Chart.defaults.color = '#94a3b8';
+
+    const fmtMoney = (val) => {
+        if (val === null || val === undefined) return "۰ ریال";
+        return Number(val).toLocaleString("fa-IR") + " ریال";
+    };
+
+    // ۱. نمودار میله‌ای مقایسه‌ای روند ماه به ماه
+    const trendCtx = document.getElementById('reportTrendChart');
+    if (trendCtx) {
+        const trendLabels = {{ monthly_trends.labels | tojson }};
+        const incomes = {{ monthly_trends.incomes | tojson }};
+        const expenses = {{ monthly_trends.expenses | tojson }};
+        const netFlows = {{ monthly_trends.net_flows | tojson }};
+
+        new Chart(trendCtx, {
+            data: {
+                labels: trendLabels,
+                datasets: [
+                    {
+                        type: 'line',
+                        label: 'تراز نهایی ماه',
+                        data: netFlows,
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                        borderWidth: 2.5,
+                        pointBackgroundColor: '#38bdf8',
+                        pointBorderColor: '#0f172a',
+                        pointBorderWidth: 2,
+                        pointRadius: 4.5,
+                        tension: 0.35,
+                        fill: false,
+                        order: 1
+                    },
+                    {
+                        type: 'bar',
+                        label: 'درآمدها',
+                        data: incomes,
+                        backgroundColor: 'rgba(16, 185, 129, 0.85)',
+                        hoverBackgroundColor: '#10b981',
+                        borderRadius: 6,
+                        maxBarThickness: 36,
+                        order: 2
+                    },
+                    {
+                        type: 'bar',
+                        label: 'هزینه‌ها',
+                        data: expenses,
+                        backgroundColor: 'rgba(244, 63, 94, 0.85)',
+                        hoverBackgroundColor: '#f43f5e',
+                        borderRadius: 6,
+                        maxBarThickness: 36,
+                        order: 3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        rtl: true,
+                        labels: {
+                            color: '#cbd5e1',
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            padding: 14,
+                            font: { size: 12 }
+                        }
+                    },
+                    tooltip: {
+                        rtl: true,
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        borderColor: 'rgba(255, 255, 255, 0.15)',
+                        borderWidth: 1,
+                        padding: 10,
+                        titleFont: { size: 13, weight: 'bold' },
+                        bodyFont: { size: 12 },
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.dataset.label + ': ' + fmtMoney(ctx.raw);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.04)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { size: 11 }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.06)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { size: 11 },
+                            callback: function(val) {
+                                if (Math.abs(val) >= 1000000000) {
+                                    return (val / 1000000000).toLocaleString('fa-IR') + ' م.م';
+                                }
+                                if (Math.abs(val) >= 1000000) {
+                                    return (val / 1000000).toLocaleString('fa-IR') + ' م';
+                                }
+                                return val.toLocaleString('fa-IR');
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // ۲. نمودار دونات سهم هزینه‌ها در دوره فیلتر شده
+    const expCtx = document.getElementById('reportExpenseDonut');
+    if (expCtx) {
+        const expLabels = {{ report.expense_breakdown.labels | tojson }};
+        const expAmounts = {{ report.expense_breakdown.amounts | tojson }};
+        const expColors = {{ report.expense_breakdown.colors | tojson }};
+
+        if (expAmounts && expAmounts.length > 0) {
+            new Chart(expCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: expLabels,
+                    datasets: [{
+                        data: expAmounts,
+                        backgroundColor: expColors,
+                        borderColor: '#111827',
+                        borderWidth: 3,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '66%',
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            rtl: true,
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            borderColor: 'rgba(255, 255, 255, 0.15)',
+                            borderWidth: 1,
+                            padding: 10,
+                            callbacks: {
+                                label: function(ctx) {
+                                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                    const pct = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : 0;
+                                    return ctx.label + ': ' + fmtMoney(ctx.raw) + ' (' + Number(pct).toLocaleString('fa-IR') + '٪)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+});
+</script>
+{% endblock %}

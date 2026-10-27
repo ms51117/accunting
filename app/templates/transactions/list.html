@@ -1,29 +1,173 @@
 {% extends "base.html" %}
-{% block title %}تراکنش‌های مالی{% endblock %}
+{% block title %}مدیریت تراکنش‌های مالی{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<!-- هدر صفحه و دکمه ثبت -->
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
     <div>
-        <h4 class="mb-1"><i class="bi bi-arrow-left-right me-2"></i>تراکنش‌های مالی</h4>
-        <span class="text-muted">ثبت و مدیریت درآمدها، هزینه‌ها و انتقالات</span>
+        <h4 class="mb-1 fw-bold"><i class="bi bi-cash-coin text-primary me-2"></i>تراکنش‌های مالی</h4>
+        <span class="text-muted small">ثبت، مدیریت و فیلتر درآمدها، هزینه‌ها و انتقالات</span>
     </div>
-    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newTransModal">
-        <i class="bi bi-plus-circle me-1"></i> ثبت تراکنش جدید
+    <button class="btn btn-primary d-inline-flex align-items-center justify-content-center shadow-sm" data-bs-toggle="modal" data-bs-target="#newTransModal">
+        <i class="bi bi-plus-lg me-1"></i> ثبت تراکنش جدید
     </button>
 </div>
 
-<div class="card shadow-sm border-0">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+<!-- کارت‌های خلاصه آماری دوره فیلترشده -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+        <div class="card p-3 border-0 bg-success bg-opacity-10 border-start border-success border-4 h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="text-success small fw-bold">کل درآمد فیلترشده</span>
+                    <h4 class="text-success fw-bold mt-2 mb-0 latin-num">{{ total_income | rial }} <small class="fs-6">ریال</small></h4>
+                </div>
+                <div class="text-success opacity-75 fs-2">
+                    <i class="bi bi-arrow-down-left-circle-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="card p-3 border-0 bg-danger bg-opacity-10 border-start border-danger border-4 h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="text-danger small fw-bold">کل هزینه فیلترشده</span>
+                    <h4 class="text-danger fw-bold mt-2 mb-0 latin-num">{{ total_expense | rial }} <small class="fs-6">ریال</small></h4>
+                </div>
+                <div class="text-danger opacity-75 fs-2">
+                    <i class="bi bi-arrow-up-right-circle-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="card p-3 border-0 {% if net_flow >= 0 %}bg-primary bg-opacity-10 border-start border-primary{% else %}bg-warning bg-opacity-10 border-start border-warning{% endif %} border-4 h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="{% if net_flow >= 0 %}text-primary{% else %}text-warning{% endif %} small fw-bold">تراز خالص دوره</span>
+                    <h4 class="{% if net_flow >= 0 %}text-primary{% else %}text-warning{% endif %} fw-bold mt-2 mb-0 latin-num">
+                        {{ net_flow | rial }} <small class="fs-6">ریال</small>
+                    </h4>
+                </div>
+                <div class="{% if net_flow >= 0 %}text-primary{% else %}text-warning{% endif %} opacity-75 fs-2">
+                    <i class="bi bi-wallet-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- بخش فیلترهای پیشرفته (ماه شمسی، بانک/حساب، نوع تراکنش) -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-3">
+        <form method="GET" action="/transactions" class="row g-2 align-items-end">
+
+            <!-- فیلتر نوع تراکنش -->
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-bold text-muted mb-1">نوع تراکنش</label>
+                <select name="type_filter" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="ALL" {% if type_filter == 'ALL' %}selected{% endif %}>همه انواع</option>
+                    <option value="INCOME" {% if type_filter == 'INCOME' %}selected{% endif %}>درآمدها (واریز)</option>
+                    <option value="EXPENSE" {% if type_filter == 'EXPENSE' %}selected{% endif %}>هزینه‌ها (برداشت)</option>
+                    <option value="TRANSFER" {% if type_filter == 'TRANSFER' %}selected{% endif %}>انتقالات</option>
+                </select>
+            </div>
+
+            <!-- فیلتر دسته‌بندی -->
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-bold text-muted mb-1">دسته‌بندی</label>
+                <select name="category_filter" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">همه دسته‌ها</option>
+                    {% for c in categories %}
+                    <option value="{{ c.id }}" {% if category_filter == c.id %}selected{% endif %}>{{ c.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- فیلتر حساب بانکی / صندوق -->
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-bold text-muted mb-1">حساب / بانک</label>
+                <select name="account_filter" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">همه حساب‌ها</option>
+                    {% for acc in accounts %}
+                    <option value="{{ acc.id }}" {% if account_filter == acc.id %}selected{% endif %}>{{ acc.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- فیلتر ماه شمسی -->
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-bold text-muted mb-1">ماه شمسی</label>
+                <select name="month_filter" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">تمام ماه‌ها</option>
+                    {% for m_num, m_name in persian_months %}
+                    <option value="{{ m_num }}" {% if month_filter == m_num %}selected{% endif %}>
+                        {{ m_name }} {% if m_num == current_j_month %}(جاری){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- فیلتر سال -->
+            <div class="col-6 col-md-1">
+                <label class="form-label small fw-bold text-muted mb-1">سال</label>
+                <select name="year_filter" class="form-select form-select-sm" onchange="this.form.submit()">
+                    {% for y in available_years %}
+                    <option value="{{ y }}" {% if year_filter == y %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- جستجوی عنوان یا توضیح -->
+            <div class="col-8 col-md-2">
+                <label class="form-label small fw-bold text-muted mb-1">جستجو</label>
+                <input type="text" name="search" value="{{ search or '' }}" class="form-control form-control-sm" placeholder="عنوان یا سرفصل...">
+            </div>
+
+            <!-- دکمه‌ها -->
+            <div class="col-4 col-md-1 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-primary w-100" title="اعمال فیلتر">
+                    <i class="bi bi-funnel"></i>
+                </button>
+                <a href="/transactions" class="btn btn-sm btn-outline-secondary" title="حذف فیلترها">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            </div>
+        </form>
+
+        <!-- دسترسی سریع به ماه جاری -->
+        <div class="d-flex align-items-center gap-2 mt-3 pt-2 border-top small text-muted">
+            <span class="fw-bold">دسترسی سریع:</span>
+            <a href="/transactions?month_filter={{ current_j_month }}&year_filter={{ current_j_year }}" class="badge {% if month_filter == current_j_month %}bg-primary text-white{% else %}bg-light text-dark border{% endif %} text-decoration-none py-1 px-2">
+                <i class="bi bi-calendar-check me-1"></i>تراکنش‌های ماه جاری ({% for m_num, m_name in persian_months %}{% if m_num == current_j_month %}{{ m_name }}{% endif %}{% endfor %})
+            </a>
+            <a href="/transactions" class="badge bg-light text-dark border text-decoration-none py-1 px-2">
+                نمایش همه تراکنش‌ها
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- جدول تراکنش‌ها برای دسکتاپ و کارت‌ها برای موبایل -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-list-columns-reverse me-2"></i>لیست تراکنش‌ها</h6>
+        <span class="badge bg-secondary-subtle text-secondary border">{{ transactions|length }} رکورد</span>
+    </div>
+
+    <!-- جدول مخصوص صفحه بزرگ -->
+    <div class="table-responsive d-none d-md-block">
+        <table class="table table-hover align-middle mb-0 text-center">
+            <thead class="table-light small text-muted">
                 <tr>
                     <th>نوع</th>
-                    <th>دسته‌بندی</th>
+                    <th>سرفصل / دسته‌بندی</th>
+                    <th>حساب بانکی</th>
                     <th>مبلغ (ریال)</th>
-                    <th>حساب مبدأ</th>
                     <th>تاریخ</th>
                     <th>توضیحات</th>
-                    <th class="text-center" style="width: 140px;">عملیات</th>
+                    <th style="width: 120px;">عملیات</th>
                 </tr>
             </thead>
             <tbody>
@@ -31,19 +175,52 @@
                 <tr>
                     <td>
                         {% if tx.type == 'INCOME' %}
-                            <span class="badge bg-success-subtle text-success border border-success">درآمد / واریز</span>
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success">
+                                <i class="bi bi-arrow-down-left me-1"></i>درآمد
+                            </span>
                         {% elif tx.type == 'EXPENSE' %}
-                            <span class="badge bg-danger-subtle text-danger border border-danger">هزینه / برداشت</span>
+                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">
+                                <i class="bi bi-arrow-up-right me-1"></i>هزینه
+                            </span>
                         {% else %}
-                            <span class="badge bg-primary-subtle text-primary border border-primary">انتقال بین حساب</span>
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary">
+                                <i class="bi bi-arrow-left-right me-1"></i>انتقال
+                            </span>
                         {% endif %}
                     </td>
-                    <td class="fw-bold">{{ tx.category }}</td>
-                    <td class="fw-bold text-primary">{{ tx.amount | rial }}</td>
-                    <td>{{ tx.account.title if tx.account else '-' }}</td>
+                    <td>
+                        {% if tx.category_rel %}
+                        <span class="badge" style="background: {{ tx.category_rel.color }}22; color: {{ tx.category_rel.color }}; border: 1px solid {{ tx.category_rel.color }}55; font-size: 0.85rem;">
+                            <i class="bi bi-{{ tx.category_rel.icon }} me-1"></i>{{ tx.category_rel.title }}
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25" style="font-size: 0.85rem;">
+                            <i class="bi bi-tag me-1"></i>{{ tx.category }}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div>{{ tx.account.title if tx.account else '-' }}</div>
+                        {% if tx.type == 'TRANSFER' and tx.destination_account %}
+                            <small class="text-muted d-block">به: {{ tx.destination_account.title }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="fw-bold latin-num {% if tx.type == 'INCOME' %}text-success{% elif tx.type == 'EXPENSE' %}text-danger{% else %}text-primary{% endif %}">
+                            {{ tx.amount | rial }}
+                        </span>
+                    </td>
                     <td>{{ tx.trans_date | jalali }}</td>
-                    <td class="small text-muted">{{ tx.description or '-' }}</td>
-                    <td class="text-center">
+                    <td style="max-width: 260px;">
+                        {% if tx.description %}
+                        <div class="text-truncate mx-auto" style="color: #f1f5f9; font-size: 0.86rem;" title="{{ tx.description }}">
+                            {{ tx.description }}
+                        </div>
+                        {% else %}
+                        <span style="color: #64748b;">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
                         <div class="d-inline-flex gap-1 align-items-center">
                             <!-- دکمه ویرایش -->
                             <button class="btn btn-sm btn-outline-primary p-1 px-2" title="ویرایش" data-bs-toggle="modal" data-bs-target="#editTransModal{{ tx.id }}">
@@ -59,93 +236,167 @@
                         </div>
                     </td>
                 </tr>
-
-                <!-- مودال ویرایش تراکنش -->
-                <div class="modal fade" id="editTransModal{{ tx.id }}" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog">
-                        <div class="modal-content text-end">
-                            <form method="POST" action="/transactions/{{ tx.id }}/update">
-                                <div class="modal-header d-flex flex-row-reverse">
-                                    <h5 class="modal-title">ویرایش تراکنش</h5>
-                                    <button type="button" class="btn-close m-0" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="mb-3">
-                                        <label class="form-label">نوع تراکنش *</label>
-                                        <select name="trans_type" class="form-select edit-type-select" data-id="{{ tx.id }}" required>
-                                            <option value="EXPENSE" {% if tx.type == 'EXPENSE' %}selected{% endif %}>هزینه (برداشت)</option>
-                                            <option value="INCOME" {% if tx.type == 'INCOME' %}selected{% endif %}>درآمد (واریز)</option>
-                                            <option value="TRANSFER" {% if tx.type == 'TRANSFER' %}selected{% endif %}>انتقال بین حساب‌ها</option>
-                                        </select>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">حساب مبدأ *</label>
-                                        <select name="account_id" class="form-select" required>
-                                            {% for acc in accounts %}
-                                            <option value="{{ acc.id }}" {% if acc.id == tx.account_id %}selected{% endif %}>{{ acc.title }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="mb-3 edit-dest-wrapper" id="editDestWrapper{{ tx.id }}" {% if tx.type != 'TRANSFER' %}style="display:none;"{% endif %}>
-                                        <label class="form-label">حساب مقصد *</label>
-                                        <select name="destination_account_id" class="form-select">
-                                            <option value="" disabled selected>انتخاب حساب مقصد...</option>
-                                            {% for acc in accounts %}
-                                            <option value="{{ acc.id }}" {% if acc.id == tx.destination_account_id %}selected{% endif %}>{{ acc.title }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">دسته‌بندی / سرفصل *</label>
-                                        <input type="text" name="category" value="{{ tx.category }}" class="form-control" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">مبلغ (ریال) *</label>
-                                        <input type="text" name="amount" value="{{ tx.amount }}" class="form-control" min="1" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">تاریخ تراکنش *</label>
-                                        <input type="text" name="trans_date" value="{{ tx.trans_date | jalali }}" class="form-control latin-num" data-jdp required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">توضیحات</label>
-                                        <textarea name="description" class="form-control" rows="2">{{ tx.description or '' }}</textarea>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
-                                    <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
                 {% else %}
                 <tr>
-                    <td colspan="7" class="text-center py-4 text-muted">
-                        <i class="bi bi-inbox display-6 d-block mb-2"></i>
-                        هیچ تراکنشی ثبت نشده است.
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                        هیچ تراکنشی متناسب با فیلترهای انتخابی یافت نشد.
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+
+    <!-- نمایش کارت‌های اختصاصی موبایل (زیر 768 پیکسل) -->
+    <div class="d-md-none p-2">
+        {% for tx in transactions %}
+        <div class="card p-3 mb-2 border shadow-none bg-light bg-opacity-50">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    {% if tx.type == 'INCOME' %}
+                        <span class="badge bg-success text-white mb-1"><i class="bi bi-arrow-down-left me-1"></i>درآمد</span>
+                    {% elif tx.type == 'EXPENSE' %}
+                        <span class="badge bg-danger text-white mb-1"><i class="bi bi-arrow-up-right me-1"></i>هزینه</span>
+                    {% else %}
+                        <span class="badge bg-primary text-white mb-1"><i class="bi bi-arrow-left-right me-1"></i>انتقال</span>
+                    {% endif %}
+                    <div class="mt-1">
+                        {% if tx.category_rel %}
+                        <span class="badge" style="background: {{ tx.category_rel.color }}22; color: {{ tx.category_rel.color }}; border: 1px solid {{ tx.category_rel.color }}55; font-size: 0.85rem;">
+                            <i class="bi bi-{{ tx.category_rel.icon }} me-1"></i>{{ tx.category_rel.title }}
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25" style="font-size: 0.85rem;">
+                            <i class="bi bi-tag me-1"></i>{{ tx.category }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="text-end">
+                    <span class="fw-bold latin-num fs-6 {% if tx.type == 'INCOME' %}text-success{% elif tx.type == 'EXPENSE' %}text-danger{% else %}text-primary{% endif %}">
+                        {{ tx.amount | rial }} <small class="fs-7">ریال</small>
+                    </span>
+                    <small class="d-block text-secondary mt-1" style="font-size: 0.8rem;">
+                        {{ tx.trans_date | jalali }}
+                    </small>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center pt-2 border-top small text-muted">
+                <div>
+                    <i class="bi bi-bank me-1"></i>{{ tx.account.title if tx.account else '-' }}
+                    {% if tx.type == 'TRANSFER' and tx.destination_account %}
+                        <i class="bi bi-arrow-left mx-1"></i>{{ tx.destination_account.title }}
+                    {% endif %}
+                </div>
+                <div class="d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-primary py-1 px-2" data-bs-toggle="modal" data-bs-target="#editTransModal{{ tx.id }}">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <form method="POST" action="/transactions/{{ tx.id }}/delete" onsubmit="return confirm('آیا از حذف این تراکنش اطمینان دارید؟');" class="d-inline m-0">
+                        <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% if tx.description %}
+            <div class="mt-2 p-2 rounded" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); color: #f1f5f9; font-size: 0.82rem; line-height: 1.5;">
+                <i class="bi bi-chat-left-text me-1 text-primary opacity-75"></i>{{ tx.description }}
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-inbox fs-1 d-block mb-2 opacity-50"></i>
+            هیچ تراکنشی متناسب با فیلتر انتخاب شده یافت نشد.
+        </div>
+        {% endfor %}
+    </div>
 </div>
 
-<!-- مودال ثبت تراکنش جدید -->
-<div class="modal fade" id="newTransModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content text-end">
-            <form method="POST" action="/transactions/create">
-                <div class="modal-header d-flex flex-row-reverse">
-                    <h5 class="modal-title">ثبت تراکنش جدید</h5>
-                    <button type="button" class="btn-close m-0" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- مودال‌های ویرایش تراکنش‌ها -->
+{% for tx in transactions %}
+<div class="modal fade text-start" id="editTransModal{{ tx.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" action="/transactions/{{ tx.id }}/update">
+                <div class="modal-header">
+                    <h5 class="modal-title">ویرایش تراکنش</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">نوع تراکنش *</label>
+                        <label class="form-label small fw-bold">نوع تراکنش *</label>
+                        <select name="trans_type" class="form-select edit-type-select" data-id="{{ tx.id }}" required>
+                            <option value="EXPENSE" {% if tx.type == 'EXPENSE' %}selected{% endif %}>هزینه (برداشت)</option>
+                            <option value="INCOME" {% if tx.type == 'INCOME' %}selected{% endif %}>درآمد (واریز)</option>
+                            <option value="TRANSFER" {% if tx.type == 'TRANSFER' %}selected{% endif %}>انتقال بین حساب‌ها</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">حساب مبدأ *</label>
+                        <select name="account_id" class="form-select" required>
+                            {% for acc in accounts %}
+                            <option value="{{ acc.id }}" {% if acc.id == tx.account_id %}selected{% endif %}>{{ acc.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3 edit-dest-wrapper" id="editDestWrapper{{ tx.id }}" {% if tx.type != 'TRANSFER' %}style="display:none;"{% endif %}>
+                        <label class="form-label small fw-bold">حساب مقصد *</label>
+                        <select name="destination_account_id" class="form-select">
+                            <option value="" disabled selected>انتخاب حساب مقصد...</option>
+                            {% for acc in accounts %}
+                            <option value="{{ acc.id }}" {% if acc.id == tx.destination_account_id %}selected{% endif %}>{{ acc.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">دسته‌بندی / سرفصل *</label>
+                        <select name="category_id" class="form-select" required>
+                            {% for c in categories %}
+                            <option value="{{ c.id }}" {% if c.id == tx.category_id or c.title == tx.category %}selected{% endif %}>
+                                {{ c.title }} {% if c.type == 'EXPENSE' %}(هزینه){% elif c.type == 'INCOME' %}(درآمد){% else %}(مشترک){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">مبلغ (ریال) *</label>
+                        <input type="text" name="amount" value="{{ tx.amount }}" class="form-control currency-input latin-num" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">تاریخ تراکنش *</label>
+                        <input type="text" name="trans_date" value="{{ tx.trans_date | jalali }}" class="form-control latin-num" data-jdp required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">توضیحات</label>
+                        <textarea name="description" class="form-control" rows="2">{{ tx.description or '' }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- مودال ثبت تراکنش جدید -->
+<div class="modal fade text-start" id="newTransModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" action="/transactions/create">
+                <div class="modal-header">
+                    <h5 class="modal-title">ثبت تراکنش جدید</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">نوع تراکنش *</label>
                         <select name="trans_type" id="newTransType" class="form-select" onchange="toggleNewTransferFields()" required>
                             <option value="EXPENSE">هزینه (برداشت)</option>
                             <option value="INCOME">درآمد (واریز)</option>
@@ -153,16 +404,16 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">حساب مبدأ *</label>
+                        <label class="form-label small fw-bold">حساب مبدأ *</label>
                         <select name="account_id" class="form-select" required>
                             <option value="" disabled selected>انتخاب حساب...</option>
                             {% for acc in accounts %}
-                            <option value="{{ acc.id }}">{{ acc.title }}</option>
+                            <option value="{{ acc.id }}">{{ acc.title }} (موجودی: {{ acc.balance | rial }})</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="mb-3" id="newDestWrapper" style="display:none;">
-                        <label class="form-label">حساب مقصد *</label>
+                        <label class="form-label small fw-bold">حساب مقصد *</label>
                         <select name="destination_account_id" class="form-select">
                             <option value="" disabled selected>انتخاب حساب مقصد...</option>
                             {% for acc in accounts %}
@@ -171,20 +422,32 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">دسته‌بندی / سرفصل *</label>
-                        <input type="text" name="category" class="form-control" placeholder="مثال: اجاره، کمیسیون، حقوق" required>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label small fw-bold mb-0">دسته‌بندی / سرفصل *</label>
+                            <a href="/categories" target="_blank" class="small text-primary text-decoration-none">
+                                <i class="bi bi-plus-circle me-1"></i>مدیریت دسته‌ها
+                            </a>
+                        </div>
+                        <select name="category_id" id="newTransCategory" class="form-select" required>
+                            <option value="" disabled selected>انتخاب دسته‌بندی...</option>
+                            {% for c in categories %}
+                            <option value="{{ c.id }}" data-type="{{ c.type }}">
+                                {{ c.title }} {% if c.type == 'EXPENSE' %}(هزینه){% elif c.type == 'INCOME' %}(درآمد){% else %}(مشترک){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">مبلغ (ریال) *</label>
-                        <input type="text" name="amount" class="form-control" min="1" required>
+                        <label class="form-label small fw-bold">مبلغ (ریال) *</label>
+                        <input type="text" name="amount" class="form-control currency-input latin-num" placeholder="مبلغ به ریال" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">تاریخ تراکنش *</label>
-                        <input type="text" name="trans_date" class="form-control latin-num" placeholder="مثال: 1405/06/15" data-jdp required>
+                        <label class="form-label small fw-bold">تاریخ تراکنش *</label>
+                        <input type="text" name="trans_date" class="form-control latin-num" value="{{ today_jalali }}" data-jdp required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">توضیحات</label>
-                        <textarea name="description" class="form-control" rows="2"></textarea>
+                        <label class="form-label small fw-bold">توضیحات</label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="توضیحات اختیاری..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">

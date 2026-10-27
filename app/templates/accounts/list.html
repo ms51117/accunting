@@ -14,30 +14,31 @@
 
 <div class="row g-3">
     {% for acc in accounts %}
-    <div class="col-md-4">
-        <div class="card h-100 shadow-sm border-0">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h5 class="card-title mb-0">{{ acc.title }}</h5>
-                    <div class="d-flex gap-1">
-                        <!-- دکمه ویرایش -->
-                        <button class="btn btn-sm btn-link text-primary p-0" title="ویرایش" data-bs-toggle="modal" data-bs-target="#editAccountModal{{ acc.id }}">
-                            <i class="bi bi-pencil"></i>
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100 p-3 position-relative overflow-hidden accent-bar-blue">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <h5 class="card-title fw-bold text-white mb-1">{{ acc.title }}</h5>
+                    <span class="text-secondary small"><i class="bi bi-bank me-1"></i>{{ acc.bank_name or 'صندوق نقدی' }}</span>
+                </div>
+                <div class="d-flex gap-1">
+                    <!-- دکمه ویرایش -->
+                    <button class="btn btn-sm btn-outline-primary py-1 px-2" title="ویرایش" data-bs-toggle="modal" data-bs-target="#editAccountModal{{ acc.id }}">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <!-- دکمه حذف -->
+                    <form method="POST" action="/accounts/{{ acc.id }}/delete" onsubmit="return confirm('آیا از حذف این حساب اطمینان دارید؟');" class="d-inline m-0">
+                        <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2" title="حذف">
+                            <i class="bi bi-trash"></i>
                         </button>
-                        <!-- دکمه حذف -->
-                        <form method="POST" action="/accounts/{{ acc.id }}/delete" onsubmit="return confirm('آیا از حذف این حساب اطمینان دارید؟');" class="d-inline">
-                            <button class="btn btn-sm btn-link text-danger p-0" title="حذف">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </form>
-                    </div>
+                    </form>
                 </div>
-                <div class="text-muted small mb-3">{{ acc.bank_name or 'صندوق نقدی' }}</div>
+            </div>
 
-                <div class="bg-light rounded p-2 mb-3 text-center">
-                    <div class="small text-muted mb-1">موجودی فعلی</div>
-                    <div class="h5 mb-0 text-success fw-bold">{{ acc.balance | rial }} <small class="text-muted fs-6">ریال</small></div>
-                </div>
+            <div class="rounded-3 p-3 my-3 text-center" style="background: #111724; border: 1px solid rgba(255,255,255,0.06);">
+                <div class="small text-secondary mb-1">موجودی فعلی</div>
+                <div class="h4 mb-0 text-success fw-bold latin-num">{{ acc.balance | rial }} <small class="text-muted fs-6">ریال</small></div>
+            </div>
 
                 {% if acc.card_number %}
                 <div class="small text-muted mb-1 d-flex justify-content-between">
@@ -53,7 +54,6 @@
                 {% endif %}
             </div>
         </div>
-    </div>
 
     <!-- مودال ویرایش برای هر حساب -->
     <div class="modal fade" id="editAccountModal{{ acc.id }}" tabindex="-1" aria-hidden="true">
