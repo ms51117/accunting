@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app.database import engine, Base
+from app.database import engine, Base, run_auto_migrations
 from app.config import settings
 from app.utils.jalali import format_rial, to_jalali_str
 from tunnel_service import tunnel_service
@@ -24,6 +24,8 @@ os.makedirs("backups", exist_ok=True)
 
 # ساخت جداول دیتابیس
 Base.metadata.create_all(bind=engine)
+# اجرای مهاجرت خودکار فیلدهای جدید برای دیتابیس‌های موجود
+run_auto_migrations()
 
 async def cheque_reminder_worker():
     """کارگر پس‌زمینه برای بررسی خودکار دوره‌ای سررسید چک‌ها و ارسال هشدار تلگرام"""
