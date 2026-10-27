@@ -8,11 +8,11 @@
     <div class="col-12 col-md-4">
         <div class="card p-3 h-100 position-relative overflow-hidden" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid rgba(59, 130, 246, 0.35);">
             <div class="d-flex justify-content-between align-items-start">
-                <div>
+                <div class="overflow-hidden">
                     <span class="text-secondary small fw-medium">موجودی کل نقدینگی (بانک‌ها و صندوق)</span>
-                    <h3 class="fw-bold mt-2 mb-0 text-white latin-num">{{ total_balance | rial }} <small class="fs-6 text-muted">ریال</small></h3>
+                    <h3 class="fw-bold mt-2 mb-0 text-white latin-num card-kpi-value">{{ total_balance | rial }} <small class="fs-6 text-muted">ریال</small></h3>
                 </div>
-                <div class="dock-brand m-0" style="width: 44px; height: 44px; font-size: 1.25rem;">
+                <div class="dock-brand m-0 flex-shrink-0" style="width: 44px; height: 44px; font-size: 1.25rem;">
                     <i class="bi bi-wallet2"></i>
                 </div>
             </div>
@@ -25,12 +25,12 @@
 
     <!-- چک‌های در جریان -->
     <div class="col-12 col-md-4">
-        <div class="card p-3 h-100" style="background: var(--bg-card); border-top: 4px solid var(--accent-lime);">
+        <div class="card p-3 h-100 overflow-hidden" style="background: var(--bg-card); border-top: 4px solid var(--accent-lime);">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <span class="text-secondary small fw-medium">چک‌های دریافتی نزد صندوق</span>
-                <span class="tag-dot lime">در انتظار پاس</span>
+                <span class="tag-dot lime flex-shrink-0">در انتظار پاس</span>
             </div>
-            <h4 class="text-success fw-bold mb-2 latin-num">{{ pending_receivable_cheques | rial }} <small class="fs-6 text-muted">ریال</small></h4>
+            <h4 class="text-success fw-bold mb-2 latin-num card-kpi-value">{{ pending_receivable_cheques | rial }} <small class="fs-6 text-muted">ریال</small></h4>
             <hr class="my-2 border-secondary border-opacity-25">
             <div class="d-flex justify-content-between align-items-center">
                 <span class="text-secondary small">چک‌های پرداختی ما:</span>
@@ -41,12 +41,12 @@
 
     <!-- مطالبات و بدهی‌ها -->
     <div class="col-12 col-md-4">
-        <div class="card p-3 h-100" style="background: var(--bg-card); border-top: 4px solid var(--accent-orange);">
+        <div class="card p-3 h-100 overflow-hidden" style="background: var(--bg-card); border-top: 4px solid var(--accent-orange);">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <span class="text-secondary small fw-medium">طلب ما از طرف‌حساب‌ها</span>
-                <span class="tag-dot orange">مطالبات</span>
+                <span class="tag-dot orange flex-shrink-0">مطالبات</span>
             </div>
-            <h4 class="text-info fw-bold mb-2 latin-num">{{ total_receivable_debt | rial }} <small class="fs-6 text-muted">ریال</small></h4>
+            <h4 class="text-info fw-bold mb-2 latin-num card-kpi-value">{{ total_receivable_debt | rial }} <small class="fs-6 text-muted">ریال</small></h4>
             <hr class="my-2 border-secondary border-opacity-25">
             <div class="d-flex justify-content-between align-items-center">
                 <span class="text-secondary small">بدهی ما به اشخاص:</span>
@@ -61,8 +61,8 @@
     <div class="col-12 col-lg-7">
         
         <!-- نمودار روند گردش مالی ماهانه -->
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card mb-4 overflow-hidden">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div class="d-flex align-items-center gap-2">
                     <i class="bi bi-graph-up text-primary fs-5"></i>
                     <div>
@@ -70,35 +70,41 @@
                         <small class="text-muted" style="font-size: 0.76rem;">مقایسه درآمد، هزینه و تراز نقدینگی (۶ ماه اخیر)</small>
                     </div>
                 </div>
-                <a href="/reports" class="btn btn-sm btn-outline-light py-1 px-3">
+                <a href="/reports" class="btn btn-sm btn-outline-light py-1 px-3 text-nowrap">
                     گزارش جامع <i class="bi bi-arrow-left me-1"></i>
                 </a>
             </div>
 
             <div class="card-body p-3">
-                <!-- شاخص‌های فشرده بالای نمودار -->
-                <div class="row g-2 mb-3 text-center">
-                    <div class="col-4">
-                        <div class="p-2 rounded-3" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2);">
-                            <span class="text-muted d-block" style="font-size: 0.72rem;">کل درآمد ۶ ماه</span>
-                            <span class="text-success fw-bold latin-num fs-6">{{ total_income_period | rial }}</span>
-                            <span class="text-muted" style="font-size: 0.68rem;">ریال</span>
+                <!-- شاخص‌های فشرده بالای نمودار (واکنش‌گرا برای موبایل) -->
+                <div class="row g-2 mb-3">
+                    <div class="col-12 col-md-4">
+                        <div class="p-2 px-3 rounded-3 d-flex d-md-block justify-content-between align-items-center text-md-center" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2);">
+                            <span class="text-muted small d-block" style="font-size: 0.75rem;">کل درآمد ۶ ماه</span>
+                            <div class="text-start text-md-center">
+                                <span class="text-success fw-bold latin-num fs-6">{{ total_income_period | rial }}</span>
+                                <span class="text-muted" style="font-size: 0.68rem;">ریال</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-4">
-                        <div class="p-2 rounded-3" style="background: rgba(244, 63, 94, 0.08); border: 1px solid rgba(244, 63, 94, 0.2);">
-                            <span class="text-muted d-block" style="font-size: 0.72rem;">کل هزینه ۶ ماه</span>
-                            <span class="text-danger fw-bold latin-num fs-6">{{ total_expense_period | rial }}</span>
-                            <span class="text-muted" style="font-size: 0.68rem;">ریال</span>
+                    <div class="col-12 col-md-4">
+                        <div class="p-2 px-3 rounded-3 d-flex d-md-block justify-content-between align-items-center text-md-center" style="background: rgba(244, 63, 94, 0.08); border: 1px solid rgba(244, 63, 94, 0.2);">
+                            <span class="text-muted small d-block" style="font-size: 0.75rem;">کل هزینه ۶ ماه</span>
+                            <div class="text-start text-md-center">
+                                <span class="text-danger fw-bold latin-num fs-6">{{ total_expense_period | rial }}</span>
+                                <span class="text-muted" style="font-size: 0.68rem;">ریال</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-4">
-                        <div class="p-2 rounded-3" style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.2);">
-                            <span class="text-muted d-block" style="font-size: 0.72rem;">تراز خالص دوره</span>
-                            <span class="{% if net_period >= 0 %}text-info{% else %}text-warning{% endif %} fw-bold latin-num fs-6">
-                                {{ net_period | rial }}
-                            </span>
-                            <span class="text-muted" style="font-size: 0.68rem;">ریال</span>
+                    <div class="col-12 col-md-4">
+                        <div class="p-2 px-3 rounded-3 d-flex d-md-block justify-content-between align-items-center text-md-center" style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.2);">
+                            <span class="text-muted small d-block" style="font-size: 0.75rem;">تراز خالص دوره</span>
+                            <div class="text-start text-md-center">
+                                <span class="{% if net_period >= 0 %}text-info{% else %}text-warning{% endif %} fw-bold latin-num fs-6">
+                                    {{ net_period | rial }}
+                                </span>
+                                <span class="text-muted" style="font-size: 0.68rem;">ریال</span>
+                            </div>
                         </div>
                     </div>
                 </div>

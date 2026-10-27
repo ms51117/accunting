@@ -2,13 +2,13 @@
 {% block title %}دفتر طلب و بدهی اشخاص{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
     <div>
-        <h4 class="mb-1"><i class="bi bi-wallet2 me-2"></i>دفتر طلب و بدهی اشخاص</h4>
-        <span class="text-muted">مدیریت حساب مطالبات و بدهی‌ها</span>
+        <h4 class="mb-1 text-white fw-bold"><i class="bi bi-wallet2 me-2 text-primary"></i>دفتر طلب و بدهی اشخاص</h4>
+        <span class="text-secondary small">مدیریت حساب مطالبات و بدهی‌ها</span>
     </div>
 
-    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newDebtModal">
+    <button class="btn btn-primary btn-sm py-2 px-3 text-nowrap d-flex align-items-center justify-content-center w-100 w-md-auto" data-bs-toggle="modal" data-bs-target="#newDebtModal">
         <i class="bi bi-plus-circle me-1"></i> ثبت طلب / بدهی جدید
     </button>
 </div>
@@ -220,7 +220,7 @@
     <div class="d-md-none p-2 p-sm-3">
         {% for d in debts %}
         {% set is_receivable = (d.type == 'RECEIVABLE' or d.type.value == 'RECEIVABLE') %}
-        <div class="card mb-3 border shadow-sm rounded-3">
+        <div class="card mb-3 border shadow-none rounded-3 overflow-hidden" style="background: rgba(255, 255, 255, 0.03);">
             <div class="card-body p-3">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>
@@ -233,7 +233,7 @@
                                 <i class="bi bi-arrow-up-right me-1"></i>بدهی ما
                             </span>
                         {% endif %}
-                        <h6 class="fw-bold mb-0 text-dark">{{ d.person.full_name }}</h6>
+                        <h6 class="fw-bold mb-0 text-white">{{ d.person.full_name }}</h6>
                     </div>
                     <div class="text-end">
                         {% if d.status == 'ACTIVE' %}
@@ -244,10 +244,10 @@
                     </div>
                 </div>
 
-                <div class="bg-light rounded-3 p-2 my-2">
+                <div class="rounded-3 p-2 my-2" style="background: rgba(255, 255, 255, 0.04);">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <span class="text-muted small">مبلغ کل:</span>
-                        <span class="fw-semibold latin-num">{{ d.amount | rial }} <small class="text-muted">ریال</small></span>
+                        <span class="fw-semibold latin-num card-kpi-value">{{ d.amount | rial }} <small class="text-muted">ریال</small></span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <span class="text-muted small">تسویه شده:</span>

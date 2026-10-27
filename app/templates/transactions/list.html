@@ -8,7 +8,7 @@
         <h4 class="mb-1 fw-bold"><i class="bi bi-cash-coin text-primary me-2"></i>تراکنش‌های مالی</h4>
         <span class="text-muted small">ثبت، مدیریت و فیلتر درآمدها، هزینه‌ها و انتقالات</span>
     </div>
-    <button class="btn btn-primary d-inline-flex align-items-center justify-content-center shadow-sm" data-bs-toggle="modal" data-bs-target="#newTransModal">
+    <button class="btn btn-primary d-inline-flex align-items-center justify-content-center shadow-sm w-100 w-sm-auto py-2 px-3" data-bs-toggle="modal" data-bs-target="#newTransModal">
         <i class="bi bi-plus-lg me-1"></i> ثبت تراکنش جدید
     </button>
 </div>
@@ -16,41 +16,41 @@
 <!-- کارت‌های خلاصه آماری دوره فیلترشده -->
 <div class="row g-3 mb-4">
     <div class="col-12 col-md-4">
-        <div class="card p-3 border-0 bg-success bg-opacity-10 border-start border-success border-4 h-100">
+        <div class="card p-3 border-0 bg-success bg-opacity-10 border-start border-success border-4 h-100 overflow-hidden">
             <div class="d-flex justify-content-between align-items-center">
-                <div>
+                <div class="overflow-hidden">
                     <span class="text-success small fw-bold">کل درآمد فیلترشده</span>
-                    <h4 class="text-success fw-bold mt-2 mb-0 latin-num">{{ total_income | rial }} <small class="fs-6">ریال</small></h4>
+                    <h4 class="text-success fw-bold mt-2 mb-0 latin-num card-kpi-value">{{ total_income | rial }} <small class="fs-6">ریال</small></h4>
                 </div>
-                <div class="text-success opacity-75 fs-2">
+                <div class="text-success opacity-75 fs-2 flex-shrink-0">
                     <i class="bi bi-arrow-down-left-circle-fill"></i>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-12 col-md-4">
-        <div class="card p-3 border-0 bg-danger bg-opacity-10 border-start border-danger border-4 h-100">
+        <div class="card p-3 border-0 bg-danger bg-opacity-10 border-start border-danger border-4 h-100 overflow-hidden">
             <div class="d-flex justify-content-between align-items-center">
-                <div>
+                <div class="overflow-hidden">
                     <span class="text-danger small fw-bold">کل هزینه فیلترشده</span>
-                    <h4 class="text-danger fw-bold mt-2 mb-0 latin-num">{{ total_expense | rial }} <small class="fs-6">ریال</small></h4>
+                    <h4 class="text-danger fw-bold mt-2 mb-0 latin-num card-kpi-value">{{ total_expense | rial }} <small class="fs-6">ریال</small></h4>
                 </div>
-                <div class="text-danger opacity-75 fs-2">
+                <div class="text-danger opacity-75 fs-2 flex-shrink-0">
                     <i class="bi bi-arrow-up-right-circle-fill"></i>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-12 col-md-4">
-        <div class="card p-3 border-0 {% if net_flow >= 0 %}bg-primary bg-opacity-10 border-start border-primary{% else %}bg-warning bg-opacity-10 border-start border-warning{% endif %} border-4 h-100">
+        <div class="card p-3 border-0 {% if net_flow >= 0 %}bg-primary bg-opacity-10 border-start border-primary{% else %}bg-warning bg-opacity-10 border-start border-warning{% endif %} border-4 h-100 overflow-hidden">
             <div class="d-flex justify-content-between align-items-center">
-                <div>
+                <div class="overflow-hidden">
                     <span class="{% if net_flow >= 0 %}text-primary{% else %}text-warning{% endif %} small fw-bold">تراز خالص دوره</span>
-                    <h4 class="{% if net_flow >= 0 %}text-primary{% else %}text-warning{% endif %} fw-bold mt-2 mb-0 latin-num">
+                    <h4 class="{% if net_flow >= 0 %}text-primary{% else %}text-warning{% endif %} fw-bold mt-2 mb-0 latin-num card-kpi-value">
                         {{ net_flow | rial }} <small class="fs-6">ریال</small>
                     </h4>
                 </div>
-                <div class="{% if net_flow >= 0 %}text-primary{% else %}text-warning{% endif %} opacity-75 fs-2">
+                <div class="{% if net_flow >= 0 %}text-primary{% else %}text-warning{% endif %} opacity-75 fs-2 flex-shrink-0">
                     <i class="bi bi-wallet-fill"></i>
                 </div>
             </div>

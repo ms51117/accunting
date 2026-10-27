@@ -654,3 +654,74 @@ body {
     margin-top: 10px;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Mobile Typography & Layout Optimizations (< 576px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 575.98px) {
+  /* تنظیم خودکار سایز هدینگ‌ها و عناوین در گوشی‌های کوچک */
+  h3, .h3 {
+    font-size: 1.35rem !important;
+  }
+  h4, .h4 {
+    font-size: 1.15rem !important;
+  }
+  h5, .h5 {
+    font-size: 1.02rem !important;
+  }
+
+  /* کلاس بهینه برای کنترل اندازه مبالغ مالی بزرگ در کارت‌ها */
+  .card-kpi-value, .responsive-kpi-num {
+    font-size: clamp(0.88rem, 3.8vw, 1.25rem) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.3;
+  }
+
+  /* پدینگ مناسب کارت‌ها در صفحه موبایل */
+  .card {
+    border-radius: var(--radius-md) !important;
+  }
+  .card-body, .card.p-3 {
+    padding: 0.85rem !important;
+  }
+  .card-header {
+    padding: 0.75rem 0.85rem !important;
+  }
+
+  /* یکنواخت‌سازی دکمه‌های عملیاتی بالای صفحات در موبایل */
+  .mobile-action-btns {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 8px !important;
+  }
+  .mobile-action-btns .btn,
+  .mobile-action-btns a.btn {
+    flex: 1 1 0 !important;
+    white-space: nowrap !important;
+    font-size: 0.82rem !important;
+    padding: 0.6rem 0.4rem !important;
+    justify-content: center !important;
+    text-align: center !important;
+    border-radius: 12px !important;
+  }
+
+  /* اصلاح هدر جدول‌ها در موبایل جهت جلوگیری از شکست عمودی کلمات */
+  .table > :not(caption) > * > * {
+    padding: 0.65rem 0.45rem !important;
+    font-size: 0.82rem !important;
+  }
+  .table thead th {
+    white-space: nowrap !important;
+    font-size: 0.78rem !important;
+  }
+
+  /* فیلتر تب‌های وضعیت چک‌ها و بدهی‌ها */
+  .nav-pills .nav-link {
+    font-size: 0.72rem !important;
+    padding: 0.35rem 0.4rem !important;
+    white-space: nowrap !important;
+  }
+}

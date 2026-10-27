@@ -22,12 +22,12 @@
             <small class="text-secondary">پیگیری اسناد دریافتی، پرداختی و یادآوری خودکار سررسیدها در تلگرام</small>
         </div>
 
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <button type="button" id="btnSendTelegram" class="btn btn-outline-info shadow-sm d-flex align-items-center gap-2" onclick="sendTelegramReminders()">
+        <div class="mobile-action-btns">
+            <button type="button" id="btnSendTelegram" class="btn btn-outline-info shadow-sm d-flex align-items-center justify-content-center gap-2" onclick="sendTelegramReminders()">
                 <i class="bi bi-telegram"></i>
                 <span>ارسال یادآور به تلگرام</span>
             </button>
-            <button type="button" class="btn btn-primary shadow-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#newChequeModal">
+            <button type="button" class="btn btn-primary shadow-sm d-flex align-items-center justify-content-center gap-2" data-bs-toggle="modal" data-bs-target="#newChequeModal">
                 <i class="bi bi-plus-lg"></i>
                 <span>ثبت چک جدید</span>
             </button>
@@ -299,7 +299,7 @@
             <!-- نمایش کارت‌های اختصاصی موبایل برای چک‌ها -->
             <div class="d-md-none p-2">
                 {% for ch in cheques %}
-                <div class="card p-3 mb-2 border shadow-none bg-light bg-opacity-50">
+                <div class="card p-3 mb-2 border shadow-none overflow-hidden" style="background: rgba(255, 255, 255, 0.03);">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
                             {% if ch.type == 'RECEIVABLE' %}
@@ -311,11 +311,11 @@
                                     <i class="bi bi-arrow-up-right me-1"></i>پرداختی
                                 </span>
                             {% endif %}
-                            <h6 class="fw-bold mb-0 text-dark">{{ ch.person.full_name if ch.person else 'نامشخص' }}</h6>
+                            <h6 class="fw-bold mb-0 text-white">{{ ch.person.full_name if ch.person else 'نامشخص' }}</h6>
                         </div>
                         <div class="text-end">
-                            <span class="fw-bold latin-num fs-6 text-primary">
-                                {{ ch.amount | rial }} <small class="fs-7">ریال</small>
+                            <span class="fw-bold latin-num fs-6 text-primary card-kpi-value d-inline-block">
+                                {{ ch.amount | rial }} <small class="fs-7 text-muted">ریال</small>
                             </span>
                             <div>
                                 {% if ch.status == 'PENDING' %}
