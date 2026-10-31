@@ -477,6 +477,19 @@ body {
   border-radius: 12px;
 }
 
+[dir="rtl"] .input-group > :first-child {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-top-right-radius: 12px !important;
+  border-bottom-right-radius: 12px !important;
+}
+[dir="rtl"] .input-group > :last-child {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  border-top-left-radius: 12px !important;
+  border-bottom-left-radius: 12px !important;
+}
+
 /* جدول‌های دارک */
 .table {
   color: #f8fafc;
@@ -626,6 +639,15 @@ body {
   box-shadow: 0 10px 30px rgba(37, 99, 235, 0.15);
 }
 
+/* گروه دکمه‌های عملیاتی بالای صفحات (دسکتاپ و حالت پیش‌فرض) */
+.mobile-action-btns,
+.page-action-btns {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 /* --------------------------------------------------------------------------
    Responsive Media Queries (< 992px)
    -------------------------------------------------------------------------- */
@@ -696,22 +718,25 @@ body {
     padding: 0.75rem 0.85rem !important;
   }
 
-  /* یکنواخت‌سازی دکمه‌های عملیاتی بالای صفحات در موبایل */
-  .mobile-action-btns {
-    width: 100% !important;
+  /* یکنواخت‌سازی دکمه‌های عملیاتی بالای صفحات در موبایل بدون کشیدگی بدقواره */
+  .mobile-action-btns,
+  .page-action-btns {
     display: flex !important;
-    flex-direction: row !important;
+    flex-wrap: wrap !important;
     gap: 8px !important;
+    width: auto !important;
   }
   .mobile-action-btns .btn,
-  .mobile-action-btns a.btn {
-    flex: 1 1 0 !important;
+  .mobile-action-btns a.btn,
+  .page-action-btns .btn,
+  .page-action-btns a.btn {
     white-space: nowrap !important;
     font-size: 0.82rem !important;
-    padding: 0.6rem 0.4rem !important;
+    padding: 0.45rem 0.75rem !important;
+    border-radius: 10px !important;
+    display: inline-flex !important;
+    align-items: center !important;
     justify-content: center !important;
-    text-align: center !important;
-    border-radius: 12px !important;
   }
 
   /* اصلاح هدر جدول‌ها در موبایل جهت جلوگیری از شکست عمودی کلمات */

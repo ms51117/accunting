@@ -2,39 +2,39 @@
 {% block title %}مدیریت چک‌ها{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
-        <div>
-            <div class="d-flex align-items-center gap-2">
-                <h4 class="mb-0 text-white fw-bold">
-                    <i class="bi bi-card-checklist me-2 text-primary"></i>مدیریت چک‌ها و اسناد صیادی
-                </h4>
-                {% if user.telegram_chat_id %}
-                    <span class="badge bg-info-subtle text-info border border-info d-none d-md-inline-flex align-items-center gap-1" title="شناسه تلگرام فعال است">
-                        <i class="bi bi-telegram"></i> یادآور تلگرام فعال ({{ user.telegram_chat_id }})
-                    </span>
-                {% else %}
-                    <a href="/profile" class="badge bg-warning-subtle text-warning border border-warning text-decoration-none d-none d-md-inline-flex align-items-center gap-1" title="جهت دریافت هشدار، شناسه تلگرام را در پروفایل ثبت کنید">
-                        <i class="bi bi-exclamation-triangle"></i> تنظیم شناسه تلگرام
-                    </a>
-                {% endif %}
-            </div>
-            <small class="text-secondary">پیگیری اسناد دریافتی، پرداختی و یادآوری خودکار سررسیدها در تلگرام</small>
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3 mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <h4 class="mb-0 text-white fw-bold">
+                <i class="bi bi-card-checklist me-2 text-primary"></i>مدیریت چک‌ها
+            </h4>
+            {% if user.telegram_chat_id %}
+                <span class="badge bg-info-subtle text-info border border-info align-items-center gap-1 d-inline-flex" style="font-size: 0.72rem;" title="شناسه تلگرام فعال است">
+                    <i class="bi bi-telegram"></i> یادآور فعال
+                </span>
+            {% else %}
+                <a href="/profile" class="badge bg-warning-subtle text-warning border border-warning text-decoration-none align-items-center gap-1 d-inline-flex" style="font-size: 0.72rem;" title="جهت دریافت هشدار، شناسه تلگرام را در پروفایل ثبت کنید">
+                    <i class="bi bi-exclamation-triangle"></i> اتصال تلگرام
+                </a>
+            {% endif %}
         </div>
-
-        <div class="mobile-action-btns">
-            <button type="button" id="btnSendTelegram" class="btn btn-outline-info shadow-sm d-flex align-items-center justify-content-center gap-2" onclick="sendTelegramReminders()">
-                <i class="bi bi-telegram"></i>
-                <span>ارسال یادآور به تلگرام</span>
-            </button>
-            <button type="button" class="btn btn-primary shadow-sm d-flex align-items-center justify-content-center gap-2" data-bs-toggle="modal" data-bs-target="#newChequeModal">
-                <i class="bi bi-plus-lg"></i>
-                <span>ثبت چک جدید</span>
-            </button>
-        </div>
+        <small class="text-secondary d-block mt-1">پیگیری اسناد صیادی دریافتی، پرداختی و سررسیدها</small>
     </div>
 
-    <div class="card shadow-sm border-0">
+    <!-- دکمه‌های عملیاتی با فاصله‌گذاری استاندارد، مرتب و بدون چسبندگی -->
+    <div class="d-flex align-items-center gap-2 flex-wrap flex-shrink-0">
+        <button type="button" id="btnSendTelegram" class="btn btn-outline-info btn-sm d-inline-flex align-items-center gap-2 py-2 px-3 rounded-3" onclick="sendTelegramReminders()" title="ارسال آنی هشدار سررسید چک‌ها به تلگرام">
+            <i class="bi bi-telegram"></i>
+            <span>ارسال یادآور</span>
+        </button>
+        <button type="button" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2 py-2 px-3 rounded-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#newChequeModal">
+            <i class="bi bi-plus-lg"></i>
+            <span>ثبت چک جدید</span>
+        </button>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
         <div class="card-header border-bottom py-2 px-3 d-flex justify-content-center">
             <div class="nav nav-pills nav-fill bg-light p-1 rounded-3 w-100 mx-auto" style="max-width: 520px;">
                 <a href="/cheques?status_filter=PENDING{% if type_filter %}&type_filter={{ type_filter }}{% endif %}"
@@ -246,7 +246,6 @@
             </div>
         </div>
     </div>
-</div>
 
 <!-- مودال‌های عملیات چک (وصول، ویرایش، حذف) خارج از جدول جهت عملکرد بی‌نقص در موبایل و دسکتاپ -->
 {% for ch in cheques %}

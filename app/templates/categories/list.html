@@ -13,8 +13,9 @@
         </span>
     </div>
     <div class="d-flex gap-2">
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newCategoryModal">
-            <i class="bi bi-plus-lg me-1"></i> دسته‌بندی جدید
+        <button class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2 py-2 px-3 rounded-3 shadow-sm flex-shrink-0" data-bs-toggle="modal" data-bs-target="#newCategoryModal">
+            <i class="bi bi-plus-lg"></i>
+            <span>دسته‌بندی جدید</span>
         </button>
     </div>
 </div>
@@ -66,29 +67,35 @@
 <div class="card border-0 shadow-sm mb-4" style="background: #151d2c; border: 1px solid rgba(255,255,255,0.06) !important;">
     <div class="card-body p-3">
         <form method="GET" action="/categories" class="row g-2 align-items-center">
+            <input type="hidden" name="type_filter" value="{{ type_filter }}">
             <div class="col-12 col-md-4">
-                <div class="d-flex gap-1">
-                    <a href="/categories?type_filter=ALL" class="btn btn-sm flex-fill {% if type_filter == 'ALL' %}btn-primary{% else %}btn-outline-secondary text-secondary{% endif %}">
+                <div class="d-flex p-1 rounded-3 gap-1" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); height: 44px;">
+                    <a href="/categories?type_filter=ALL{% if search %}&search={{ search }}{% endif %}" class="btn btn-sm flex-fill d-inline-flex align-items-center justify-content-center rounded-2 py-0 {% if type_filter == 'ALL' %}btn-primary shadow-sm{% else %}text-secondary{% endif %}" style="font-size: 0.88rem; font-weight: 500;">
                         همه دسته‌ها
                     </a>
-                    <a href="/categories?type_filter=EXPENSE" class="btn btn-sm flex-fill {% if type_filter == 'EXPENSE' %}btn-danger{% else %}btn-outline-secondary text-secondary{% endif %}">
+                    <a href="/categories?type_filter=EXPENSE{% if search %}&search={{ search }}{% endif %}" class="btn btn-sm flex-fill d-inline-flex align-items-center justify-content-center rounded-2 py-0 {% if type_filter == 'EXPENSE' %}btn-danger shadow-sm{% else %}text-secondary{% endif %}" style="font-size: 0.88rem; font-weight: 500;">
                         هزینه‌ها
                     </a>
-                    <a href="/categories?type_filter=INCOME" class="btn btn-sm flex-fill {% if type_filter == 'INCOME' %}btn-success{% else %}btn-outline-secondary text-secondary{% endif %}">
+                    <a href="/categories?type_filter=INCOME{% if search %}&search={{ search }}{% endif %}" class="btn btn-sm flex-fill d-inline-flex align-items-center justify-content-center rounded-2 py-0 {% if type_filter == 'INCOME' %}btn-success shadow-sm{% else %}text-secondary{% endif %}" style="font-size: 0.88rem; font-weight: 500;">
                         درآمدها
                     </a>
                 </div>
             </div>
             <div class="col-8 col-md-6">
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-search"></i></span>
-                    <input type="text" name="search" value="{{ search or '' }}" class="form-control" placeholder="جستجو در نام یا شرح دسته‌بندی...">
+                <div class="position-relative w-100">
+                    <input type="text" name="search" value="{{ search or '' }}" class="form-control pe-5" placeholder="جستجو در نام یا شرح دسته‌بندی..." style="height: 44px; border-radius: 12px; font-size: 0.92rem;">
+                    <i class="bi bi-search position-absolute top-50 translate-middle-y text-secondary opacity-75" style="right: 14px; pointer-events: none; font-size: 0.95rem;"></i>
                 </div>
             </div>
             <div class="col-4 col-md-2 d-flex gap-1">
-                <button type="submit" class="btn btn-sm btn-primary w-100">فیلتر</button>
+                <button type="submit" class="btn btn-primary w-100 d-inline-flex align-items-center justify-content-center gap-1.5 shadow-sm" style="height: 44px; border-radius: 12px; font-size: 0.92rem; font-weight: 500;">
+                    <i class="bi bi-funnel-fill"></i>
+                    <span>اعمال</span>
+                </button>
                 {% if search or type_filter != 'ALL' %}
-                <a href="/categories" class="btn btn-sm btn-outline-secondary" title="حذف فیلترها"><i class="bi bi-x-lg"></i></a>
+                <a href="/categories" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center px-3" title="حذف فیلترها" style="height: 44px; border-radius: 12px;">
+                    <i class="bi bi-x-lg"></i>
+                </a>
                 {% endif %}
             </div>
         </form>

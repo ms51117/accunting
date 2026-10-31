@@ -18,7 +18,7 @@ logger = logging.getLogger("cloudflare_tunnel")
 class CloudflareTunnelService:
     def __init__(self):
         self.bot_token = getattr(settings, "TELEGRAM_BOT_TOKEN", None) or getattr(settings, "telegram_bot_token", None)
-        self.is_enabled = getattr(settings, "CLOUDFLARE_TUNNEL_ENABLED", True)
+        self.is_enabled = getattr(settings, "CLOUDFLARE_TUNNEL_ENABLED", False)
         self.port = getattr(settings, "APP_PORT", 8000)
         self.last_url = None
 
@@ -57,6 +57,8 @@ class CloudflareTunnelService:
             return False
 
     async def notify_users(self, new_url: str):
+        if not self.is_enabled:
+            return
         shamsi_now = jdatetime.datetime.now().strftime("%Y/%m/%d - %H:%M")
 
         db = SessionLocal()

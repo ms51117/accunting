@@ -18,7 +18,11 @@ class Settings(BaseSettings):
     HTTP_PROXY: Optional[str] = None
     HTTPS_PROXY: Optional[str] = None
 
-    CLOUDFLARE_TUNNEL_ENABLED: bool = True
+    # دامنه اختصاصی سامانه (اختیاری جهت لینک‌های مستقیم و اعلان‌ها)
+    APP_DOMAIN: Optional[str] = None
+
+    # تونل موقت کلودفلر (پیش‌فرض غیرفعال - با وجود دامنه اختصاصی نیازی به آن نیست)
+    CLOUDFLARE_TUNNEL_ENABLED: bool = False
     APP_PORT: int = 8000
 
     # تنظیمات Pydantic V2

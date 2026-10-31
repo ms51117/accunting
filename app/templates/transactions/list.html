@@ -3,13 +3,14 @@
 
 {% block content %}
 <!-- هدر صفحه و دکمه ثبت -->
-<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3 mb-4">
     <div>
-        <h4 class="mb-1 fw-bold"><i class="bi bi-cash-coin text-primary me-2"></i>تراکنش‌های مالی</h4>
-        <span class="text-muted small">ثبت، مدیریت و فیلتر درآمدها، هزینه‌ها و انتقالات</span>
+        <h4 class="mb-1 text-white fw-bold"><i class="bi bi-cash-coin text-primary me-2"></i>تراکنش‌های مالی</h4>
+        <span class="text-secondary small">ثبت، مدیریت و فیلتر درآمدها، هزینه‌ها و انتقالات</span>
     </div>
-    <button class="btn btn-primary d-inline-flex align-items-center justify-content-center shadow-sm w-100 w-sm-auto py-2 px-3" data-bs-toggle="modal" data-bs-target="#newTransModal">
-        <i class="bi bi-plus-lg me-1"></i> ثبت تراکنش جدید
+    <button class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2 py-2 px-3 rounded-3 shadow-sm flex-shrink-0" data-bs-toggle="modal" data-bs-target="#newTransModal">
+        <i class="bi bi-plus-lg"></i>
+        <span>ثبت تراکنش جدید</span>
     </button>
 </div>
 
@@ -126,11 +127,11 @@
             </div>
 
             <!-- دکمه‌ها -->
-            <div class="col-4 col-md-1 d-flex gap-1">
-                <button type="submit" class="btn btn-sm btn-primary w-100" title="اعمال فیلتر">
+            <div class="col-4 col-md-1 d-flex gap-1 align-items-end">
+                <button type="submit" class="btn btn-primary w-100 d-inline-flex align-items-center justify-content-center" title="اعمال فیلتر" style="height: 45px; border-radius: 12px;">
                     <i class="bi bi-funnel"></i>
                 </button>
-                <a href="/transactions" class="btn btn-sm btn-outline-secondary" title="حذف فیلترها">
+                <a href="/transactions" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center px-2" title="حذف فیلترها" style="height: 45px; border-radius: 12px;">
                     <i class="bi bi-x-lg"></i>
                 </a>
             </div>

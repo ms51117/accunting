@@ -42,22 +42,35 @@ async def cheque_reminder_worker():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # چاپ راهنمای دسترسی محلی در کنسول
+    # چاپ راهنمای دسترسی در کنسول
     print("\n" + "="*60, flush=True)
     print(f"💎 سامانه حسابداری شخصی فعال شد:", flush=True)
-    print(f"💻 دسترسی در همین کامپیوتر:   http://localhost:{settings.APP_PORT}", flush=True)
-    print(f"📱 دسترسی در گوشی (وای‌فای): http://192.168.1.117:{settings.APP_PORT}", flush=True)
+    print(f"💻 دسترسی محلی در همین سیستم: http://localhost:{settings.APP_PORT}", flush=True)
+    if getattr(settings, "APP_DOMAIN", None):
+        domain_url = settings.APP_DOMAIN.strip().rstrip("/")
+        if not domain_url.startswith("http"):
+            domain_url = f"https://{domain_url}"
+        print(f"🌐 دامنه اختصاصی اینترنتی:   {domain_url}", flush=True)
     print("="*60 + "\n", flush=True)
 
-    # شروع تونل و کارگر یادآور چک‌ها در پس‌زمینه
-    tunnel_task = asyncio.create_task(tunnel_service.start())
+    # کارگر یادآور چک‌ها در پس‌زمینه
     reminder_task = asyncio.create_task(cheque_reminder_worker())
+
+    # اجرای تونل کلودفلر فقط در صورت فعال بودن در تنظیمات
+    tunnel_task = None
+    if getattr(settings, "CLOUDFLARE_TUNNEL_ENABLED", False):
+        tunnel_task = asyncio.create_task(tunnel_service.start())
+
     yield
-    # بستن تسک‌ها هنگام خاموش شدن برنامه
-    tunnel_task.cancel()
-    reminder_task.cancel()
+
+    # لغو تسک‌ها هنگام خاموش شدن برنامه
+    tasks_to_cancel = [reminder_task]
+    if tunnel_task:
+        tasks_to_cancel.append(tunnel_task)
+    for t in tasks_to_cancel:
+        t.cancel()
     try:
-        await asyncio.gather(tunnel_task, reminder_task, return_exceptions=True)
+        await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
     except Exception:
         pass
 

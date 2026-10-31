@@ -154,7 +154,14 @@ def build_cheque_notification_message(
     if total_receivable > 0:
         lines.append(f"• کل مطالبات دریافتی: <b>{format_rial(total_receivable)} ریال</b>")
 
-    lines.append("\n👉 <i>جهت ثبت وصول یا بررسی، به سامانه حسابداری مراجعه فرمایید.</i>")
+    app_domain = getattr(settings, "APP_DOMAIN", None)
+    if app_domain:
+        domain_url = app_domain.strip().rstrip("/")
+        if not domain_url.startswith("http"):
+            domain_url = f"https://{domain_url}"
+        lines.append(f"\n👉 <a href='{domain_url}/cheques'><b>ورود به سامانه و ثبت وصول چک‌ها</b></a>")
+    else:
+        lines.append("\n👉 <i>جهت ثبت وصول یا بررسی، به سامانه حسابداری مراجعه فرمایید.</i>")
 
     return "\n".join(lines)
 

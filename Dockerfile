@@ -8,14 +8,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONIOENCODING=utf-8
 
-# نصب پیش‌نیازهای سیستمی و دانلود خودکار cloudflared متناسب با معماری سرور (AMD64 / ARM64)
+# نصب پیش‌نیازهای سیستمی و گواهی‌های امنیتی SSL
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
-    && ARCH=$(dpkg --print-architecture) \
-    && curl -fsSL -o cloudflared.deb "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${ARCH}.deb" \
-    && dpkg -i cloudflared.deb \
-    && rm cloudflared.deb \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
