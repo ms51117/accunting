@@ -88,122 +88,6 @@
                         </div>
                     </td>
                 </tr>
-
-                <!-- مودال تسویه -->
-                <div class="modal fade" id="payModal{{ d.id }}" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content text-end">
-                            <form method="POST" action="/debts/{{ d.id }}/pay">
-                                <div class="modal-header d-flex flex-row-reverse">
-                                    <h5 class="modal-title">ثبت دریافت / پرداخت</h5>
-                                    <button type="button" class="btn-close m-0" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="alert alert-info py-2 px-3 small d-flex justify-content-between align-items-center mb-3">
-                                        <div>
-                                            <span>مانده قابل تسویه:</span>
-                                            <strong class="latin-num fs-6 ms-1">{{ (d.amount - d.paid_amount) | rial }}</strong> <small>ریال</small>
-                                        </div>
-                                        <button type="button" class="btn btn-sm btn-primary py-1 px-3 shadow-sm rounded-pill" onclick="setFullPayAmount('{{ d.id }}', '{{ d.amount - d.paid_amount }}')">
-                                            <i class="bi bi-check2-all me-1"></i>تسویه کل مانده
-                                        </button>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-bold">مبلغ پرداختی (ریال) *</label>
-                                        <input type="text" id="payAmountInput{{ d.id }}" name="pay_amount" class="form-control currency-input latin-num" placeholder="مبلغ به ریال" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">حساب مبدأ / مقصد *</label>
-                                        <select name="account_id" class="form-select" required>
-                                            <option value="" disabled selected>انتخاب حساب...</option>
-                                            {% for acc in accounts %}
-                                            <option value="{{ acc.id }}">{{ acc.name if acc.name is defined else acc.title }} (موجودی: {{ acc.balance | rial }})</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">توضیحات تراکنش</label>
-                                        <textarea name="description" class="form-control" rows="2" placeholder="بابت قسط..."></textarea>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
-                                    <button type="submit" class="btn btn-success">ثبت و کسر از مانده</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- مودال ویرایش -->
-                <div class="modal fade" id="editDebtModal{{ d.id }}" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog">
-                        <div class="modal-content text-end">
-                            <form method="POST" action="/debts/{{ d.id }}/update">
-                                <div class="modal-header d-flex flex-row-reverse">
-                                    <h5 class="modal-title">ویرایش رکورد</h5>
-                                    <button type="button" class="btn-close m-0" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="mb-3">
-                                        <label class="form-label text-muted small">نوع (غیرقابل تغییر)</label>
-
-                                        {% set is_receivable = (d.type == 'RECEIVABLE' or d.type.value == 'RECEIVABLE') %}
-
-                                        <!-- نمایش غیرقابل ویرایش با رنگ مناسب -->
-                                        <div class="p-2 rounded border fw-bold text-center {{ 'bg-success-subtle text-success border-success' if is_receivable else 'bg-danger-subtle text-danger border-danger' }}">
-                                            {% if is_receivable %}
-                                                <i class="bi bi-arrow-down-left-circle me-1"></i> طلب ما (از شخص)
-                                            {% else %}
-                                                <i class="bi bi-arrow-up-right-circle me-1"></i> بدهی ما (به شخص)
-                                            {% endif %}
-                                        </div>
-
-                                        <!-- ارسال مقدار به بک‌اند بدون امکان دستکاری کاربر -->
-                                        <input type="hidden" name="type" value="{{ 'RECEIVABLE' if is_receivable else 'PAYABLE' }}">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">طرف حساب *</label>
-                                        <select name="person_id" class="form-select" required>
-                                            {% for p in persons %}
-                                            <option value="{{ p.id }}" {% if p.id == d.person_id %}selected{% endif %}>{{ p.full_name }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">مبلغ کل (ریال) *</label>
-                                        <input type="text" name="amount" value="{{ d.amount }}" class="form-control" min="{{ d.paid_amount }}" required>
-                                        <small class="text-muted">مبلغ کل نمی‌تواند کمتر از مبالغ تسویه شده ({{ d.paid_amount | rial }}) باشد.</small>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">مبلغ پرداخت/تسویه‌شده تا الان (ریال)</label>
-                                        <input type="text"
-                                               name="paid_amount"
-                                               id="edit_debt_paid_amount_{{ d.id }}"
-                                               class="form-control number-format"
-                                               value="{{ '{:,}'.format(d.paid_amount) if d.paid_amount else '0' }}"
-                                               placeholder="در صورت عدم تغییر، خالی بگذارید">
-                                        <div class="form-text text-muted">اگر تغییر نکرده، دست نزنید.</div>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label">تاریخ سررسید (اختیاری)</label>
-                                        <input type="text" name="due_date" value="{{ d.due_date | jalali if d.due_date else '' }}" class="form-control latin-num" placeholder="مثال: 1405/08/30" data-jdp>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">توضیحات</label>
-                                        <textarea name="description" class="form-control" rows="2">{{ d.description or '' }}</textarea>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
-                                    <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
                 {% else %}
                 <tr>
                     <td colspan="8" class="text-center py-4 text-muted">
@@ -296,6 +180,124 @@
         {% endfor %}
     </div>
 </div>
+
+<!-- مودال‌های تسویه و ویرایش اختصاصی هر رکورد (بیرون از جدول و کارت‌ها جهت عملکرد در دسکتاپ و موبایل) -->
+{% for d in debts %}
+<!-- مودال تسویه -->
+<div class="modal fade text-start" id="payModal{{ d.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-end">
+            <form method="POST" action="/debts/{{ d.id }}/pay">
+                <div class="modal-header d-flex flex-row-reverse">
+                    <h5 class="modal-title">ثبت دریافت / پرداخت</h5>
+                    <button type="button" class="btn-close m-0" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info py-2 px-3 small d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <span>مانده قابل تسویه:</span>
+                            <strong class="latin-num fs-6 ms-1">{{ (d.amount - d.paid_amount) | rial }}</strong> <small>ریال</small>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary py-1 px-3 shadow-sm rounded-pill" onclick="setFullPayAmount('{{ d.id }}', '{{ d.amount - d.paid_amount }}')">
+                            <i class="bi bi-check2-all me-1"></i>تسویه کل مانده
+                        </button>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">مبلغ پرداختی (ریال) *</label>
+                        <input type="text" id="payAmountInput{{ d.id }}" name="pay_amount" class="form-control currency-input latin-num" placeholder="مبلغ به ریال" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">حساب مبدأ / مقصد *</label>
+                        <select name="account_id" class="form-select" required>
+                            <option value="" disabled selected>انتخاب حساب...</option>
+                            {% for acc in accounts %}
+                            <option value="{{ acc.id }}">{{ acc.name if acc.name is defined else acc.title }} (موجودی: {{ acc.balance | rial }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">توضیحات تراکنش</label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="بابت قسط..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-success">ثبت و کسر از مانده</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- مودال ویرایش -->
+<div class="modal fade text-start" id="editDebtModal{{ d.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-end">
+            <form method="POST" action="/debts/{{ d.id }}/update">
+                <div class="modal-header d-flex flex-row-reverse">
+                    <h5 class="modal-title">ویرایش رکورد</h5>
+                    <button type="button" class="btn-close m-0" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">نوع (غیرقابل تغییر)</label>
+
+                        {% set is_receivable = (d.type == 'RECEIVABLE' or d.type.value == 'RECEIVABLE') %}
+
+                        <!-- نمایش غیرقابل ویرایش با رنگ مناسب -->
+                        <div class="p-2 rounded border fw-bold text-center {{ 'bg-success-subtle text-success border-success' if is_receivable else 'bg-danger-subtle text-danger border-danger' }}">
+                            {% if is_receivable %}
+                                <i class="bi bi-arrow-down-left-circle me-1"></i> طلب ما (از شخص)
+                            {% else %}
+                                <i class="bi bi-arrow-up-right-circle me-1"></i> بدهی ما (به شخص)
+                            {% endif %}
+                        </div>
+
+                        <!-- ارسال مقدار به بک‌اند بدون امکان دستکاری کاربر -->
+                        <input type="hidden" name="type" value="{{ 'RECEIVABLE' if is_receivable else 'PAYABLE' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">طرف حساب *</label>
+                        <select name="person_id" class="form-select" required>
+                            {% for p in persons %}
+                            <option value="{{ p.id }}" {% if p.id == d.person_id %}selected{% endif %}>{{ p.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">مبلغ کل (ریال) *</label>
+                        <input type="text" name="amount" value="{{ d.amount }}" class="form-control" min="{{ d.paid_amount }}" required>
+                        <small class="text-muted">مبلغ کل نمی‌تواند کمتر از مبالغ تسویه شده ({{ d.paid_amount | rial }}) باشد.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">مبلغ پرداخت/تسویه‌شده تا الان (ریال)</label>
+                        <input type="text"
+                               name="paid_amount"
+                               id="edit_debt_paid_amount_{{ d.id }}"
+                               class="form-control number-format"
+                               value="{{ '{:,}'.format(d.paid_amount) if d.paid_amount else '0' }}"
+                               placeholder="در صورت عدم تغییر، خالی بگذارید">
+                        <div class="form-text text-muted">اگر تغییر نکرده، دست نزنید.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">تاریخ سررسید (اختیاری)</label>
+                        <input type="text" name="due_date" value="{{ d.due_date | jalali if d.due_date else '' }}" class="form-control latin-num" placeholder="مثال: 1405/08/30" data-jdp>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">توضیحات</label>
+                        <textarea name="description" class="form-control" rows="2">{{ d.description or '' }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
 
 <!-- مودال ثبت جدید -->
 <div class="modal fade" id="newDebtModal" tabindex="-1" aria-hidden="true">

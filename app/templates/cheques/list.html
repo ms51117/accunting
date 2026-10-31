@@ -145,143 +145,6 @@
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
-
-                                <!-- مدال وصول چک -->
-                                {% if ch.status == 'PENDING' %}
-                                <div class="modal fade text-start" id="clearModal{{ ch.id }}" tabindex="-1">
-                                    <div class="modal-dialog modal-dialog-centered">
-                                        <div class="modal-content">
-                                            <form action="/cheques/{{ ch.id }}/clear" method="post">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">وصول چک</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <p class="text-muted small mb-3">
-                                                        مبلغ <strong>{{ ch.amount | rial }} ریال</strong> به کدام حساب منظور شود؟
-                                                    </p>
-                                                    <div class="mb-3">
-                                                        <label class="form-label">انتخاب حساب مالی</label>
-                                                        <select name="account_id" class="form-select" required>
-                                                            <option value="">-- انتخاب حساب --</option>
-                                                            {% for acc in accounts %}
-                                                                <option value="{{ acc.id }}" {% if ch.account_id == acc.id %}selected{% endif %}>
-                                                                    {{ acc.title }} (موجودی: {{ acc.balance | rial }})
-                                                                </option>
-                                                            {% endfor %}
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
-                                                    <button type="submit" class="btn btn-success">تایید و ثبت وصول</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endif %}
-
-                                <!-- مدال ویرایش چک -->
-                                <div class="modal fade text-start" id="editChequeModal{{ ch.id }}" tabindex="-1">
-                                    <div class="modal-dialog modal-lg modal-dialog-centered">
-                                        <div class="modal-content">
-                                            <form action="/cheques/{{ ch.id }}/edit" method="post">
-                                                <div class="modal-header bg-primary text-white">
-                                                    <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>ویرایش مشخصات چک</h5>
-                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <div class="row g-3">
-                                                        <div class="col-md-6">
-                                                            <label class="form-label text-muted small">نوع چک (غیرقابل تغییر)</label>
-
-                                                            {% set is_receivable = (ch.type == 'RECEIVABLE' or (ch.type.value is defined and ch.type.value == 'RECEIVABLE')) %}
-
-                                                            <!-- نمایش گرافیکی و غیرقابل ویرایش بر اساس نوع چک -->
-                                                            <div class="p-2 rounded border fw-bold text-center {{ 'bg-success-subtle text-success border-success' if is_receivable else 'bg-danger-subtle text-danger border-danger' }}">
-                                                                {% if is_receivable %}
-                                                                    <i class="bi bi-arrow-down-left-circle me-1"></i> چک دریافتی (از دیگران)
-                                                                {% else %}
-                                                                    <i class="bi bi-arrow-up-right-circle me-1"></i> چک پرداختی / صادره (به دیگران)
-                                                                {% endif %}
-                                                            </div>
-                                                            <!-- ارسال مقدار نوع به بک‌اند بدون امکان تغییر توسط کاربر -->
-                                                            <input type="hidden" name="cheque_type" value="{{ 'RECEIVABLE' if is_receivable else 'PAYABLE' }}">
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label class="form-label">طرف حساب</label>
-                                                            <select name="person_id" class="form-select" required>
-                                                                {% for p in persons %}
-                                                                    <option value="{{ p.id }}" {% if ch.person_id == p.id %}selected{% endif %}>{{ p.full_name }}</option>
-                                                                {% endfor %}
-                                                            </select>
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label class="form-label">مبلغ (ریال)</label>
-                                                            <input type="text" name="amount" class="form-control" value="{{ ch.amount }}" required min="1000">
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label class="form-label">وضعیت چک</label>
-                                                            <select name="status" class="form-select" required>
-                                                                <option value="PENDING" {% if ch.status == 'PENDING' %}selected{% endif %}>در انتظار وصول</option>
-                                                                <option value="CLEARED" {% if ch.status == 'CLEARED' %}selected{% endif %}>پاس شده</option>
-                                                                <option value="BOUNCED" {% if ch.status == 'BOUNCED' %}selected{% endif %}>برگشت خورده</option>
-                                                            </select>
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label class="form-label">تاریخ سررسید (مثال: 1403/07/01)</label>
-                                                            <input type="text" name="due_date" class="form-control" data-jdp autocomplete="off" value="{{ ch.due_date | jalali if ch.due_date else '' }}" required>
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label class="form-label">تاریخ صدور</label>
-                                                            <input type="text" name="issue_date" class="form-control" data-jdp autocomplete="off" value="{{ ch.issue_date | jalali if ch.issue_date else '' }}">
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label class="form-label">نام بانک و شعبه</label>
-                                                            <input type="text" name="bank_name" class="form-control" value="{{ ch.bank_name or '' }}">
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label class="form-label">شناسه صیادی (۱۶ رقمی)</label>
-                                                            <input type="text" name="sayad_number" class="form-control" maxlength="16" value="{{ ch.sayad_number or ch.sayad_id or '' }}">
-                                                        </div>
-                                                        <div class="col-12">
-                                                            <label class="form-label">توضیحات / بابت</label>
-                                                            <textarea name="description" class="form-control" rows="2">{{ ch.description or '' }}</textarea>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
-                                                    <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- مدال تایید حذف چک -->
-                                <div class="modal fade text-start" id="deleteChequeModal{{ ch.id }}" tabindex="-1">
-                                    <div class="modal-dialog modal-dialog-centered">
-                                        <div class="modal-content">
-                                            <form action="/cheques/{{ ch.id }}/delete" method="post">
-                                                <div class="modal-header bg-danger text-white">
-                                                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>تایید حذف چک</h5>
-                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body text-center py-4">
-                                                    <p class="mb-1">آیا از حذف چک متعلق به <strong>{{ ch.person.full_name if ch.person else 'نامشخص' }}</strong> به مبلغ <strong>{{ ch.amount | rial }} ریال</strong> اطمینان دارید؟</p>
-                                                    <small class="text-danger">این عملیات غیرقابل بازگشت است.</small>
-                                                </div>
-                                                <div class="modal-footer justify-content-center">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
-                                                    <button type="submit" class="btn btn-danger">بله، حذف شود</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-
                             </td>
                         </tr>
                         {% else %}
@@ -384,6 +247,145 @@
         </div>
     </div>
 </div>
+
+<!-- مودال‌های عملیات چک (وصول، ویرایش، حذف) خارج از جدول جهت عملکرد بی‌نقص در موبایل و دسکتاپ -->
+{% for ch in cheques %}
+    <!-- مدال وصول چک -->
+    {% if ch.status == 'PENDING' %}
+    <div class="modal fade text-start" id="clearModal{{ ch.id }}" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form action="/cheques/{{ ch.id }}/clear" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title">وصول چک</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted small mb-3">
+                            مبلغ <strong>{{ ch.amount | rial }} ریال</strong> به کدام حساب منظور شود؟
+                        </p>
+                        <div class="mb-3">
+                            <label class="form-label">انتخاب حساب مالی</label>
+                            <select name="account_id" class="form-select" required>
+                                <option value="">-- انتخاب حساب --</option>
+                                {% for acc in accounts %}
+                                    <option value="{{ acc.id }}" {% if ch.account_id == acc.id %}selected{% endif %}>
+                                        {{ acc.title }} (موجودی: {{ acc.balance | rial }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                        <button type="submit" class="btn btn-success">تایید و ثبت وصول</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- مدال ویرایش چک -->
+    <div class="modal fade text-start" id="editChequeModal{{ ch.id }}" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <form action="/cheques/{{ ch.id }}/edit" method="post">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>ویرایش مشخصات چک</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small">نوع چک (غیرقابل تغییر)</label>
+
+                                {% set is_receivable = (ch.type == 'RECEIVABLE' or (ch.type.value is defined and ch.type.value == 'RECEIVABLE')) %}
+
+                                <!-- نمایش گرافیکی و غیرقابل ویرایش بر اساس نوع چک -->
+                                <div class="p-2 rounded border fw-bold text-center {{ 'bg-success-subtle text-success border-success' if is_receivable else 'bg-danger-subtle text-danger border-danger' }}">
+                                    {% if is_receivable %}
+                                        <i class="bi bi-arrow-down-left-circle me-1"></i> چک دریافتی (از دیگران)
+                                    {% else %}
+                                        <i class="bi bi-arrow-up-right-circle me-1"></i> چک پرداختی / صادره (به دیگران)
+                                    {% endif %}
+                                </div>
+                                <!-- ارسال مقدار نوع به بک‌اند بدون امکان تغییر توسط کاربر -->
+                                <input type="hidden" name="cheque_type" value="{{ 'RECEIVABLE' if is_receivable else 'PAYABLE' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">طرف حساب</label>
+                                <select name="person_id" class="form-select" required>
+                                    {% for p in persons %}
+                                        <option value="{{ p.id }}" {% if ch.person_id == p.id %}selected{% endif %}>{{ p.full_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">مبلغ (ریال)</label>
+                                <input type="text" name="amount" class="form-control" value="{{ ch.amount }}" required min="1000">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">وضعیت چک</label>
+                                <select name="status" class="form-select" required>
+                                    <option value="PENDING" {% if ch.status == 'PENDING' %}selected{% endif %}>در انتظار وصول</option>
+                                    <option value="CLEARED" {% if ch.status == 'CLEARED' %}selected{% endif %}>پاس شده</option>
+                                    <option value="BOUNCED" {% if ch.status == 'BOUNCED' %}selected{% endif %}>برگشت خورده</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">تاریخ سررسید (مثال: 1403/07/01)</label>
+                                <input type="text" name="due_date" class="form-control" data-jdp autocomplete="off" value="{{ ch.due_date | jalali if ch.due_date else '' }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">تاریخ صدور</label>
+                                <input type="text" name="issue_date" class="form-control" data-jdp autocomplete="off" value="{{ ch.issue_date | jalali if ch.issue_date else '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">نام بانک و شعبه</label>
+                                <input type="text" name="bank_name" class="form-control" value="{{ ch.bank_name or '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">شناسه صیادی (۱۶ رقمی)</label>
+                                <input type="text" name="sayad_number" class="form-control" maxlength="16" value="{{ ch.sayad_number or ch.sayad_id or '' }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">توضیحات / بابت</label>
+                                <textarea name="description" class="form-control" rows="2">{{ ch.description or '' }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                        <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- مدال تایید حذف چک -->
+    <div class="modal fade text-start" id="deleteChequeModal{{ ch.id }}" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form action="/cheques/{{ ch.id }}/delete" method="post">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>تایید حذف چک</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center py-4">
+                        <p class="mb-1">آیا از حذف چک متعلق به <strong>{{ ch.person.full_name if ch.person else 'نامشخص' }}</strong> به مبلغ <strong>{{ ch.amount | rial }} ریال</strong> اطمینان دارید؟</p>
+                        <small class="text-danger">این عملیات غیرقابل بازگشت است.</small>
+                    </div>
+                    <div class="modal-footer justify-content-center">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                        <button type="submit" class="btn btn-danger">بله، حذف شود</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endfor %}
 
 <!-- مدال ثبت چک جدید -->
 <div class="modal fade" id="newChequeModal" tabindex="-1">

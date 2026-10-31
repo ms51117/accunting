@@ -65,6 +65,12 @@ body {
   display: inline-block;
 }
 
+/* جلوگیری از بهم ریختگی جدول‌ها در صورت استفاده از latin-num روی تگ‌های td و th */
+.table td.latin-num,
+.table th.latin-num {
+  display: table-cell !important;
+}
+
 /* اسکرول‌بار دارک اختصاصی */
 ::-webkit-scrollbar {
   width: 8px;
